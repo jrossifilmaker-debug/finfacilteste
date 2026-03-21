@@ -44,7 +44,15 @@ export default function Dashboard() {
   const [filtroInicio, setFiltroInicio] = useState('')
   const [filtroFim, setFiltroFim] = useState('')
 
-  const SIDEBAR_W = menuAberto ? 224 : 64
+  const [isMobile, setIsMobile] = useState(false)
+useEffect(() => {
+  const check = () => setIsMobile(window.innerWidth < 768)
+  check()
+  window.addEventListener('resize', check)
+  return () => window.removeEventListener('resize', check)
+}, [])
+
+const SIDEBAR_W = isMobile ? 0 : (menuAberto ? 224 : 64)
 
   // cores baseadas no tema
   const bg = dark ? '#111827' : '#f9fafb'
@@ -338,8 +346,8 @@ export default function Dashboard() {
       {/* Modal lançamento aberto */}
       {lancamentoAberto && <ModalLancamento l={lancamentoAberto} onClose={() => setLancamentoAberto(null)} />}
 
-      {/* Sidebar */}
-      <aside style={{ width: SIDEBAR_W, minHeight: '100vh', backgroundColor: '#166534', display: 'flex', flexDirection: 'column', position: 'fixed', left: 0, top: 0, zIndex: 40, boxShadow: '4px 0 20px rgba(0,0,0,0.15)', transition: 'width 0.3s cubic-bezier(0.4,0,0.2,1)', overflow: 'hidden' }}>
+      {/* Sidebar — só desktop */}
+      {!isMobile && <aside style={{ width: SIDEBAR_W, minHeight: '100vh', backgroundColor: '#166534', display: 'flex', flexDirection: 'column', position: 'fixed', left: 0, top: 0, zIndex: 40, boxShadow: '4px 0 20px rgba(0,0,0,0.15)', transition: 'width 0.3s cubic-bezier(0.4,0,0.2,1)', overflow: 'hidden' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: menuAberto ? 'space-between' : 'center', padding: '20px 16px', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
           {menuAberto && <span style={{ color: 'white', fontWeight: 700, fontSize: 20, whiteSpace: 'nowrap' }}>FinFácil</span>}
           <button onClick={() => setMenuAberto(!menuAberto)} style={{ color: 'rgba(255,255,255,0.7)', background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, padding: 4 }}>
@@ -365,7 +373,24 @@ export default function Dashboard() {
             {menuAberto && <span>Sair</span>}
           </button>
         </div>
-      </aside>
+      </aside>}
+
+      {/* Bottom nav — só mobile */}
+      {isMobile && (
+        <nav style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 40, backgroundColor: '#166534', display: 'flex', alignItems: 'center', justifyContent: 'space-around', height: 64, boxShadow: '0 -4px 20px rgba(0,0,0,0.2)' }}>
+          {MENU_ITEMS.map(item => (
+            <button key={item.id} onClick={() => setAba(item.id)}
+              style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, background: 'none', border: 'none', cursor: 'pointer', padding: '6px 8px', color: aba === item.id ? 'white' : 'rgba(255,255,255,0.5)' }}>
+              <span style={{ fontSize: 18 }}>{item.icon}</span>
+              <span style={{ fontSize: 9, fontWeight: aba === item.id ? 700 : 400 }}>{item.label.split(' ')[0]}</span>
+            </button>
+          ))}
+          <button onClick={sair} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, background: 'none', border: 'none', cursor: 'pointer', padding: '6px 8px', color: 'rgba(255,255,255,0.5)' }}>
+            <span style={{ fontSize: 18 }}>↩</span>
+            <span style={{ fontSize: 9 }}>Sair</span>
+          </button>
+        </nav>
+      )}
 
       {/* Main */}
       <div style={{ marginLeft: SIDEBAR_W, flex: 1, display: 'flex', flexDirection: 'column', minHeight: '100vh', transition: 'margin-left 0.3s cubic-bezier(0.4,0,0.2,1)', backgroundColor: bg }}>
@@ -396,12 +421,12 @@ export default function Dashboard() {
           </div>
         </header>
 
-        <main style={{ flex: 1, padding: 24, backgroundColor: bg }}>
+        <main style={{ flex: 1, padding: isMobile ? 12 : 24, paddingBottom: isMobile ? 80 : 24, backgroundColor: bg }}>
 
           {/* PAINEL */}
           {aba === 'painel' && (
             <div className="page-enter">
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
                 {[
                   { label: 'Entradas do mês', valor: fmt(entradas), cor: '#16a34a', bg: dark ? '#14532d' : '#f0fdf4', border: dark ? '#166534' : '#bbf7d0' },
                   { label: 'Saídas do mês', valor: fmt(saidas), cor: '#ef4444', bg: dark ? '#7f1d1d' : '#fef2f2', border: dark ? '#991b1b' : '#fecaca' },
@@ -415,7 +440,7 @@ export default function Dashboard() {
                 ))}
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 24 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 16, marginBottom: 24 }}>
                 {[
                   { label: 'A receber', valor: fmt(contas.filter(c => c.tipo === 'receber' && !c.pago).reduce((a, c) => a + Number(c.valor), 0)), cor: '#16a34a', btnBg: '#16a34a' },
                   { label: 'A pagar', valor: fmt(contas.filter(c => c.tipo === 'pagar' && !c.pago).reduce((a, c) => a + Number(c.valor), 0)), cor: '#ef4444', btnBg: '#ef4444' },
@@ -549,7 +574,7 @@ export default function Dashboard() {
 
               <div style={{ ...cardStyle, marginBottom: 16 }}>
                 <h2 style={{ fontSize: 15, fontWeight: 600, color: txt, marginBottom: 16 }}>Novo lançamento</h2>
-                <form onSubmit={adicionarLancamento} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+                <form onSubmit={adicionarLancamento} style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr', gap: 12 }}>
                   <div style={{ gridColumn: '1/3' }}><label style={lbl}>Descrição</label><input required placeholder="Ex: Venda do dia" style={inp} value={novoLanc.descricao} onChange={e => setNovoLanc({...novoLanc, descricao: e.target.value})} /></div>
                   <div><label style={lbl}>Valor (R$)</label><input required type="number" step="0.01" placeholder="0,00" style={inp} value={novoLanc.valor} onChange={e => setNovoLanc({...novoLanc, valor: e.target.value})} /></div>
                   <div><label style={lbl}>Tipo</label><select style={inp} value={novoLanc.tipo} onChange={e => setNovoLanc({...novoLanc, tipo: e.target.value, produto_id: '', quantidade_vendida: ''})}><option value="entrada">Entrada</option><option value="saida">Saída</option></select></div>
