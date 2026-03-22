@@ -14,6 +14,7 @@ const MENU_ITEMS = [
   { id: 'metas', label: 'Metas', icon: '◇' },
   { id: 'dre', label: 'DRE', icon: '▤' },
   { id: 'clientes', label: 'Clientes', icon: '◎' },
+  { id: 'equipe', label: 'Equipe', icon: '◈' },
 ]
 
 export default function Dashboard() {
@@ -32,6 +33,8 @@ export default function Dashboard() {
   const [clienteSelecionado, setClienteSelecionado] = useState<any>(null)
   const [editandoCliente, setEditandoCliente] = useState<any>(null)
   const [novoCliente, setNovoCliente] = useState({ nome: '', email: '', telefone: '', cpf_cnpj: '', tipo: 'cliente', observacao: '' })
+  const [membros, setMembros] = useState<any[]>([])
+  const [novoMembro, setNovoMembro] = useState({ nome: '', email: '', papel: 'funcionario', acesso: 'funcionario' })
   const [novoLanc, setNovoLanc] = useState({ descricao: '', valor: '', tipo: 'entrada', categoria: 'Vendas', produto_id: '', quantidade_vendida: '', forma_pagamento: 'dinheiro', cliente_id: '', observacao: '' })
   const [novoProd, setNovoProd] = useState({ nome: '', quantidade: '', quantidade_minima: '', preco_custo: '', preco_venda: '' })
   const [novaConta, setNovaConta] = useState({ descricao: '', valor: '', tipo: 'pagar', categoria: 'Fornecedores', vencimento: '' })
@@ -101,6 +104,8 @@ export default function Dashboard() {
     setMetas(met || [])
     const { data: cli } = await supabase.from('clientes').select('*').eq('user_id', user.id).order('nome')
     setClientes(cli || [])
+    const { data: mem } = await supabase.from('membros').select('*').eq('empresa_user_id', user.id)
+    setMembros(mem || [])
   }
 
   async function adicionarLancamento(e: React.FormEvent) {
@@ -975,10 +980,110 @@ export default function Dashboard() {
                       </div>
                     ))}
                     {clientes.length === 0 && <p style={{ textAlign: 'center', color: c.txt3, padding: 32, fontSize: 13, gridColumn: '1/-1' }}>Nenhum cadastro ainda.</p>}
-                    
+
                   </div>
                 </div>
               )}
+            </div>
+          )}
+
+        {/* EQUIPE */}
+          {aba === 'equipe' && (
+            <div className="page-enter">
+              <div style={{ ...card, marginBottom: 16 }}>
+                <h2 style={{ fontSize: 15, fontWeight: 700, color: c.txt, marginBottom: 4, marginTop: 0 }}>Gerenciar Equipe</h2>
+                <p style={{ fontSize: 13, color: c.txt3, marginBottom: 16 }}>Adicione funcionários e defina os níveis de acesso</p>
+                <form onSubmit={async (e) => {
+                  e.preventDefault()
+                  const { data: { user } } = await supabase.auth.getUser()
+                  await supabase.from('membros').insert({
+                    nome: novoMembro.nome,
+                    email: novoMembro.email,
+                    papel: novoMembro.papel,
+                    acesso: novoMembro.acesso,
+                    empresa_user_id: user?.id,
+                    ativo: true
+                  })
+                  setNovoMembro({ nome: '', email: '', papel: 'funcionario', acesso: 'funcionario' })
+                  mostrarToast('Membro adicionado!')
+                  carregarDados()
+                }} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 12 }}>
+                  <div><label style={lbl}>Nome</label><input required placeholder="Ex: João Silva" style={inp} value={novoMembro.nome} onChange={e => setNovoMembro({...novoMembro, nome: e.target.value})} /></div>
+                  <div><label style={lbl}>E-mail</label><input required type="email" placeholder="email@exemplo.com" style={inp} value={novoMembro.email} onChange={e => setNovoMembro({...novoMembro, email: e.target.value})} /></div>
+                  <div><label style={lbl}>Cargo</label>
+                    <select style={inp} value={novoMembro.papel} onChange={e => setNovoMembro({...novoMembro, papel: e.target.value})}>
+                      <option value="funcionario">Funcionário</option>
+                      <option value="gerente">Gerente</option>
+                      <option value="financeiro">Financeiro</option>
+                      <option value="vendedor">Vendedor</option>
+                    </select>
+                  </div>
+                  <div><label style={lbl}>Acesso</label>
+                    <select style={inp} value={novoMembro.acesso} onChange={e => setNovoMembro({...novoMembro, acesso: e.target.value})}>
+                      <option value="funcionario">Básico — só lançamentos</option>
+                      <option value="gerente">Gerente — sem financeiro</option>
+                      <option value="admin">Admin — acesso total</option>
+                    </select>
+                  </div>
+                  <div style={{ gridColumn: '1/-1' }}><button type="submit" style={{ ...btn(c.green), width: '100%', padding: '12px', fontSize: 14 }}>+ Adicionar membro</button></div>
+                </form>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px,1fr))', gap: 16 }}>
+                {/* Card do dono */}
+                <div style={{ ...card, border: `1px solid ${dark ? 'rgba(45,155,106,0.5)' : 'rgba(45,155,106,0.3)'}` }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+                    <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'linear-gradient(135deg, #2d9b6a, #1a4731)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 800, fontSize: 16 }}>
+                      {iniciais}
+                    </div>
+                    <div>
+                      <p style={{ fontWeight: 700, color: c.txt, margin: 0 }}>{usuario?.user_metadata?.empresa}</p>
+                      <p style={{ fontSize: 12, color: c.txt3, margin: 0 }}>{usuario?.email}</p>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ backgroundColor: dark ? 'rgba(45,155,106,0.2)' : '#dcfce7', color: c.greenText, padding: '3px 10px', borderRadius: 99, fontSize: 11, fontWeight: 700 }}>Proprietário</span>
+                    <span style={{ backgroundColor: dark ? 'rgba(45,155,106,0.2)' : '#dcfce7', color: c.greenText, padding: '3px 10px', borderRadius: 99, fontSize: 11, fontWeight: 700 }}>Acesso total</span>
+                  </div>
+                </div>
+
+                {membros.map(m => (
+                  <div key={m.id} style={{ ...card }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 800, fontSize: 15 }}>
+                          {m.nome?.substring(0, 2).toUpperCase()}
+                        </div>
+                        <div>
+                          <p style={{ fontWeight: 700, color: c.txt, margin: 0 }}>{m.nome}</p>
+                          <p style={{ fontSize: 12, color: c.txt3, margin: 0 }}>{m.email}</p>
+                        </div>
+                      </div>
+                      <button onClick={async () => {
+                        if (!confirm('Remover membro?')) return
+                        await supabase.from('membros').delete().eq('id', m.id)
+                        mostrarToast('Membro removido!')
+                        carregarDados()
+                      }} style={{ backgroundColor: c.redLight, color: c.red, border: 'none', padding: '4px 8px', borderRadius: 7, fontSize: 11, cursor: 'pointer', fontWeight: 600 }}>✕</button>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ backgroundColor: c.subCard, color: c.txt2, padding: '3px 10px', borderRadius: 99, fontSize: 11, fontWeight: 600, border: `1px solid ${c.border}`, textTransform: 'capitalize' }}>{m.papel}</span>
+                      <span style={{ backgroundColor: m.acesso === 'admin' ? (dark ? 'rgba(45,155,106,0.2)' : '#dcfce7') : m.acesso === 'gerente' ? (dark ? 'rgba(37,99,235,0.2)' : '#dbeafe') : c.subCard, color: m.acesso === 'admin' ? c.greenText : m.acesso === 'gerente' ? '#2563eb' : c.txt3, padding: '3px 10px', borderRadius: 99, fontSize: 11, fontWeight: 700 }}>
+                        {m.acesso === 'admin' ? 'Admin' : m.acesso === 'gerente' ? 'Gerente' : 'Básico'}
+                      </span>
+                    </div>
+                    <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px solid ${c.border}` }}>
+                      <span style={{ fontSize: 11, color: m.ativo ? c.greenText : c.red, fontWeight: 600 }}>● {m.ativo ? 'Ativo' : 'Inativo'}</span>
+                    </div>
+                  </div>
+                ))}
+                {membros.length === 0 && (
+                  <div style={{ ...card, gridColumn: '1/-1', textAlign: 'center', padding: 40 }}>
+                    <p style={{ fontSize: 32, margin: '0 0 8px' }}>👥</p>
+                    <p style={{ color: c.txt3, fontSize: 14, margin: 0 }}>Nenhum membro ainda. Adicione sua equipe!</p>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
