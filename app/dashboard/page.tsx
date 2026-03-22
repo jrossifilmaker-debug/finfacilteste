@@ -47,7 +47,7 @@ export default function Dashboard() {
   // Paleta de cores
   const c = {
     // Backgrounds
-    bg: dark ? '#0a1628' : '#e8f0e9',
+    bg: dark ? '#0a1628' : '#d4e8d8',
     sidebar: dark ? 'rgba(13,21,32,0.85)' : 'rgba(26,71,49,0.92)',
     card: dark ? '#1a2535' : '#ffffff',
     cardAlt: dark ? '#1f2d40' : '#faf7f4',
@@ -242,7 +242,7 @@ export default function Dashboard() {
   // Estilos base
   const inp: React.CSSProperties = { width: '100%', border: `1.5px solid ${c.border}`, borderRadius: 10, padding: '9px 13px', fontSize: 14, backgroundColor: c.card, color: c.txt, outline: 'none', boxSizing: 'border-box' }
   const lbl: React.CSSProperties = { display: 'block', fontSize: 11, fontWeight: 600, color: c.txt3, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 5 }
-  const card: React.CSSProperties = { backgroundColor: c.card, border: `1px solid ${c.border}`, borderRadius: 16, padding: 20, backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', transition: 'box-shadow 0.2s ease, transform 0.2s ease' }
+  const card: React.CSSProperties = { backgroundColor: dark ? 'rgba(20,40,35,0.6)' : 'rgba(255,255,255,0.55)', border: `1px solid ${dark ? 'rgba(45,155,106,0.4)' : 'rgba(45,155,106,0.25)'}`, borderRadius: 16, padding: 20, backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', boxShadow: dark ? '0 0 0 1px rgba(45,155,106,0.15), 0 4px 24px rgba(0,0,0,0.4), inset 0 1px 0 rgba(45,155,106,0.2), 0 0 20px rgba(45,155,106,0.08)' : '0 0 0 1px rgba(45,155,106,0.1), 0 4px 24px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.9)', transition: 'box-shadow 0.25s ease, transform 0.25s ease' }
   const btn = (bg: string, color = 'white'): React.CSSProperties => ({ backgroundColor: bg, color, border: 'none', borderRadius: 10, padding: '10px 18px', fontSize: 13, fontWeight: 600, cursor: 'pointer' })
 
   const Modal = ({ children, onClose }: { children: React.ReactNode, onClose: () => void }) => (
@@ -305,7 +305,7 @@ export default function Dashboard() {
   )
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: c.bg, fontFamily: "'Inter', -apple-system, sans-serif", backgroundImage: dark ? 'radial-gradient(ellipse at 10% 20%, rgba(45,155,106,0.25) 0%, transparent 50%), radial-gradient(ellipse at 90% 80%, rgba(20,83,45,0.3) 0%, transparent 50%)' : 'radial-gradient(ellipse at 10% 20%, rgba(45,155,106,0.2) 0%, transparent 50%), radial-gradient(ellipse at 90% 80%, rgba(134,239,172,0.25) 0%, transparent 50%)' }}>
+    <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: c.bg, fontFamily: "'Inter', -apple-system, sans-serif", backgroundImage: dark ? 'radial-gradient(ellipse at 10% 20%, rgba(45,155,106,0.3) 0%, transparent 50%), radial-gradient(ellipse at 90% 80%, rgba(20,83,45,0.4) 0%, transparent 50%), radial-gradient(ellipse at 50% 50%, rgba(10,22,40,0.5) 0%, transparent 100%)' : 'radial-gradient(ellipse at 10% 20%, rgba(45,155,106,0.3) 0%, transparent 45%), radial-gradient(ellipse at 90% 80%, rgba(45,155,106,0.2) 0%, transparent 45%), radial-gradient(ellipse at 50% 10%, rgba(255,255,255,0.8) 0%, transparent 50%)' }}>
 
       {toast && (
         <div style={{ position: 'fixed', top: 20, right: 20, zIndex: 9999, backgroundColor: c.green, color: 'white', padding: '12px 20px', borderRadius: 12, boxShadow: '0 8px 24px rgba(45,106,79,0.4)', fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -397,9 +397,9 @@ export default function Dashboard() {
                   { label: 'Saldo atual', valor: fmt(saldo), cor: saldo >= 0 ? c.greenText : c.red, bg: c.card, seta: saldo >= 0 ? '↗' : '↘', setaCor: saldo >= 0 ? c.greenText : c.red },
                   { label: 'Estoque crítico', valor: `${produtosCriticos.length} itens`, cor: c.amber, bg: c.amberLight, seta: '⚠', setaCor: c.amber },
                 ].map(ct => (
-                  <div key={ct.label} style={{ backgroundColor: dark ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.6)', border: `1px solid ${dark ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.9)'}`, borderRadius: 16, padding: '16px 18px', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', transition: 'transform 0.2s ease, box-shadow 0.2s ease' }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-3px)'; (e.currentTarget as HTMLDivElement).style.boxShadow = '0 8px 24px rgba(0,0,0,0.1)' }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.transform = 'none'; (e.currentTarget as HTMLDivElement).style.boxShadow = 'none' }}>
+                  <div key={ct.label} style={{ backgroundColor: dark ? 'rgba(20,40,35,0.6)' : 'rgba(255,255,255,0.55)', border: `1px solid ${dark ? 'rgba(45,155,106,0.4)' : 'rgba(45,155,106,0.2)'}`, borderRadius: 16, padding: '16px 18px', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', boxShadow: dark ? '0 0 0 1px rgba(45,155,106,0.1), 0 4px 20px rgba(0,0,0,0.3), inset 0 1px 0 rgba(45,155,106,0.15), 0 0 15px rgba(45,155,106,0.07)' : '0 0 0 1px rgba(45,155,106,0.08), 0 4px 16px rgba(0,0,0,0.05)', transition: 'transform 0.25s ease, box-shadow 0.25s ease' }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-3px)'; (e.currentTarget as HTMLDivElement).style.boxShadow = dark ? '0 0 0 1px rgba(45,155,106,0.5), 0 8px 32px rgba(0,0,0,0.4), 0 0 30px rgba(45,155,106,0.2)' : '0 0 0 1px rgba(45,155,106,0.3), 0 8px 24px rgba(45,155,106,0.15)' }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.transform = 'none'; (e.currentTarget as HTMLDivElement).style.boxShadow = dark ? '0 0 0 1px rgba(45,155,106,0.15), 0 4px 20px rgba(0,0,0,0.3)' : '0 0 0 1px rgba(45,155,106,0.08), 0 4px 16px rgba(0,0,0,0.05)' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
                       <p style={{ fontSize: 11, fontWeight: 700, color: c.txt3, textTransform: 'uppercase', letterSpacing: '0.06em', margin: 0 }}>{ct.label}</p>
                       <span style={{ fontSize: 16, color: ct.setaCor }}>{ct.seta}</span>
@@ -975,6 +975,7 @@ export default function Dashboard() {
                       </div>
                     ))}
                     {clientes.length === 0 && <p style={{ textAlign: 'center', color: c.txt3, padding: 32, fontSize: 13, gridColumn: '1/-1' }}>Nenhum cadastro ainda.</p>}
+                    
                   </div>
                 </div>
               )}
