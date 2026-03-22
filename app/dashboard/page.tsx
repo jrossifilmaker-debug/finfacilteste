@@ -242,7 +242,7 @@ export default function Dashboard() {
   // Estilos base
   const inp: React.CSSProperties = { width: '100%', border: `1.5px solid ${c.border}`, borderRadius: 10, padding: '9px 13px', fontSize: 14, backgroundColor: c.card, color: c.txt, outline: 'none', boxSizing: 'border-box' }
   const lbl: React.CSSProperties = { display: 'block', fontSize: 11, fontWeight: 600, color: c.txt3, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 5 }
-  const card: React.CSSProperties = { backgroundColor: c.card, border: `1px solid ${c.border}`, borderRadius: 16, padding: 20 }
+  const card: React.CSSProperties = { backgroundColor: c.card, border: `1px solid ${c.border}`, borderRadius: 16, padding: 20, backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', transition: 'box-shadow 0.2s ease, transform 0.2s ease' }
   const btn = (bg: string, color = 'white'): React.CSSProperties => ({ backgroundColor: bg, color, border: 'none', borderRadius: 10, padding: '10px 18px', fontSize: 13, fontWeight: 600, cursor: 'pointer' })
 
   const Modal = ({ children, onClose }: { children: React.ReactNode, onClose: () => void }) => (
@@ -305,7 +305,7 @@ export default function Dashboard() {
   )
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: c.bg, fontFamily: "'Inter', -apple-system, sans-serif" }}>
+    <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: c.bg, fontFamily: "'Inter', -apple-system, sans-serif", backgroundImage: dark ? 'radial-gradient(ellipse at 20% 50%, rgba(45,106,79,0.08) 0%, transparent 60%), radial-gradient(ellipse at 80% 20%, rgba(45,155,106,0.05) 0%, transparent 50%)' : 'radial-gradient(ellipse at 20% 50%, rgba(45,106,79,0.06) 0%, transparent 60%), radial-gradient(ellipse at 80% 20%, rgba(45,155,106,0.04) 0%, transparent 50%)' }}>
 
       {toast && (
         <div style={{ position: 'fixed', top: 20, right: 20, zIndex: 9999, backgroundColor: c.green, color: 'white', padding: '12px 20px', borderRadius: 12, boxShadow: '0 8px 24px rgba(45,106,79,0.4)', fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -335,8 +335,8 @@ export default function Dashboard() {
           {MENU_ITEMS.map(item => (
             <button key={item.id} onClick={() => setAba(item.id)}
               style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 10, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 500, textAlign: 'left', whiteSpace: 'nowrap', transition: 'all 0.15s ease', backgroundColor: aba === item.id ? 'rgba(255,255,255,0.15)' : 'transparent', color: aba === item.id ? 'white' : 'rgba(255,255,255,0.65)', borderLeft: aba === item.id ? '3px solid #2d9b6a' : '3px solid transparent' }}
-              onMouseEnter={e => { if (aba !== item.id) (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'rgba(255,255,255,0.07)' }}
-              onMouseLeave={e => { if (aba !== item.id) (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent' }}>
+              onMouseEnter={e => { if (aba !== item.id) { (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'rgba(255,255,255,0.1)'; (e.currentTarget as HTMLButtonElement).style.transform = 'translateX(4px)' }}}
+              onMouseLeave={e => { if (aba !== item.id) { (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent'; (e.currentTarget as HTMLButtonElement).style.transform = 'translateX(0)' }}}>
               <span style={{ fontSize: 14, minWidth: 18, textAlign: 'center' }}>{item.icon}</span>
               {menuAberto && <span>{item.label}</span>}
             </button>
@@ -397,7 +397,9 @@ export default function Dashboard() {
                   { label: 'Saldo atual', valor: fmt(saldo), cor: saldo >= 0 ? c.greenText : c.red, bg: c.card, seta: saldo >= 0 ? '↗' : '↘', setaCor: saldo >= 0 ? c.greenText : c.red },
                   { label: 'Estoque crítico', valor: `${produtosCriticos.length} itens`, cor: c.amber, bg: c.amberLight, seta: '⚠', setaCor: c.amber },
                 ].map(ct => (
-                  <div key={ct.label} style={{ backgroundColor: ct.bg, border: `1px solid ${c.border}`, borderRadius: 16, padding: '16px 18px' }}>
+                  <div key={ct.label} style={{ backgroundColor: ct.bg, border: `1px solid ${c.border}`, borderRadius: 16, padding: '16px 18px', transition: 'transform 0.2s ease, box-shadow 0.2s ease' }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-3px)'; (e.currentTarget as HTMLDivElement).style.boxShadow = '0 8px 24px rgba(0,0,0,0.1)' }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.transform = 'none'; (e.currentTarget as HTMLDivElement).style.boxShadow = 'none' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
                       <p style={{ fontSize: 11, fontWeight: 700, color: c.txt3, textTransform: 'uppercase', letterSpacing: '0.06em', margin: 0 }}>{ct.label}</p>
                       <span style={{ fontSize: 16, color: ct.setaCor }}>{ct.seta}</span>
@@ -413,7 +415,9 @@ export default function Dashboard() {
                   { label: 'A receber', valor: fmt(contas.filter(ct => ct.tipo === 'receber' && !ct.pago).reduce((a, ct) => a + Number(ct.valor), 0)), cor: c.greenText, btnBg: c.green },
                   { label: 'A pagar', valor: fmt(contas.filter(ct => ct.tipo === 'pagar' && !ct.pago).reduce((a, ct) => a + Number(ct.valor), 0)), cor: c.red, btnBg: c.red },
                 ].map(ct => (
-                  <div key={ct.label} style={{ ...card, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div key={ct.label} style={{ ...card, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-2px)'; (e.currentTarget as HTMLDivElement).style.boxShadow = '0 8px 20px rgba(0,0,0,0.08)' }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.transform = 'none'; (e.currentTarget as HTMLDivElement).style.boxShadow = 'none' }}>
                     <div>
                       <p style={{ ...lbl, marginBottom: 6 }}>{ct.label}</p>
                       <p style={{ fontSize: 22, fontWeight: 800, color: ct.cor, margin: 0 }}>{ct.valor}</p>
