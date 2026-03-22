@@ -6,15 +6,15 @@ import autoTable from 'jspdf-autotable'
 import * as XLSX from 'xlsx'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 
-const MENU_ITEMS = [
-  { id: 'painel', label: 'Painel', icon: '▦' },
-  { id: 'fluxo', label: 'Fluxo de Caixa', icon: '⇅' },
-  { id: 'estoque', label: 'Estoque', icon: '▤' },
-  { id: 'contas', label: 'Contas', icon: '◉' },
-  { id: 'metas', label: 'Metas', icon: '◇' },
-  { id: 'dre', label: 'DRE', icon: '▤' },
-  { id: 'clientes', label: 'Clientes', icon: '◎' },
-  { id: 'equipe', label: 'Equipe', icon: '◈' },
+const MENU_ITEMS_ALL = [
+  { id: 'painel', label: 'Painel', icon: '▦', perm: 'sempre' },
+  { id: 'fluxo', label: 'Fluxo de Caixa', icon: '⇅', perm: 'ver_fluxo' },
+  { id: 'estoque', label: 'Estoque', icon: '▤', perm: 'ver_estoque' },
+  { id: 'contas', label: 'Contas', icon: '◉', perm: 'ver_contas' },
+  { id: 'metas', label: 'Metas', icon: '◇', perm: 'ver_metas' },
+  { id: 'dre', label: 'DRE', icon: '▤', perm: 'ver_dre' },
+  { id: 'clientes', label: 'Clientes', icon: '◎', perm: 'ver_clientes' },
+  { id: 'equipe', label: 'Equipe', icon: '◈', perm: 'ver_equipe' },
 ]
 
 export default function Dashboard() {
@@ -50,6 +50,11 @@ export default function Dashboard() {
   const [editandoConta, setEditandoConta] = useState<any>(null)
   const [filtroInicio, setFiltroInicio] = useState('')
   const [filtroFim, setFiltroFim] = useState('')
+  const [permissoes, setPermissoes] = useState<any>({
+    ver_fluxo: true, ver_estoque: true, ver_contas: true,
+    ver_dre: true, ver_metas: true, ver_clientes: true, ver_equipe: true,
+    adicionar: true, editar: true, excluir: true, is_owner: true
+  })
 
   const SIDEBAR_W = menuAberto ? 220 : 60
 
@@ -112,6 +117,16 @@ export default function Dashboard() {
     setClientes(cli || [])
     const { data: mem } = await supabase.from('membros').select('*').eq('empresa_user_id', user.id)
     setMembros(mem || [])
+
+    // Verificar se é funcionário e carregar permissões
+    const { data: membroAtual } = await supabase.from('membros').select('*').eq('email', user.email).single()
+    if (membroAtual && membroAtual.permissoes) {
+      const perm = JSON.parse(membroAtual.permissoes)
+      setPermissoes({ ...perm, is_owner: false })
+    } else {
+      // É o dono — acesso total
+      setPermissoes({ ver_fluxo: true, ver_estoque: true, ver_contas: true, ver_dre: true, ver_metas: true, ver_clientes: true, ver_equipe: true, adicionar: true, editar: true, excluir: true, is_owner: true })
+    }
   }
 
   async function adicionarLancamento(e: React.FormEvent) {
@@ -343,7 +358,7 @@ export default function Dashboard() {
 
         {/* Nav */}
         <nav style={{ flex: 1, padding: '12px 8px', display: 'flex', flexDirection: 'column', gap: 2 }}>
-          {MENU_ITEMS.map(item => (
+          {MENU_ITEMS_ALL.filter(item => item.perm === 'sempre' || (permissoes as any)[item.perm]).map(item => (
             <button key={item.id} onClick={() => setAba(item.id)}
               style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 10, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 500, textAlign: 'left', whiteSpace: 'nowrap', transition: 'all 0.15s ease', backgroundColor: aba === item.id ? 'rgba(255,255,255,0.15)' : 'transparent', color: aba === item.id ? 'white' : 'rgba(255,255,255,0.65)', borderLeft: aba === item.id ? '3px solid #2d9b6a' : '3px solid transparent' }}
               onMouseEnter={e => { if (aba !== item.id) { (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'rgba(255,255,255,0.1)'; (e.currentTarget as HTMLButtonElement).style.transform = 'translateX(4px)' }}}
@@ -369,7 +384,7 @@ export default function Dashboard() {
         {/* Header */}
         <header style={{ backgroundColor: c.header, borderBottom: `1px solid ${c.headerBorder}`, padding: '0 24px', height: 60, display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 30, backdropFilter: 'blur(8px)' }}>
           <h1 style={{ fontSize: 16, fontWeight: 700, color: c.txt, margin: 0, letterSpacing: '-0.2px' }}>
-            {MENU_ITEMS.find(m => m.id === aba)?.label || 'Painel'}
+            {MENU_ITEMS_ALL.find(m => m.id === aba)?.label || 'Painel'}
           </h1>
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
             <div style={{ display: 'flex', alignItems: 'center', border: `1.5px solid ${c.border}`, borderRadius: 10, padding: '7px 12px', gap: 8, backgroundColor: c.card }}>
@@ -595,7 +610,7 @@ export default function Dashboard() {
                     {novoLanc.produto_id && <div><label style={lbl}>Qtd vendida</label><input type="number" placeholder="0" style={inp} value={novoLanc.quantidade_vendida} onChange={e => setNovoLanc({...novoLanc, quantidade_vendida: e.target.value})} /></div>}
                   </>}
                   <div style={{ gridColumn: '1/-1' }}><label style={lbl}>Observação</label><textarea placeholder="Detalhes adicionais..." style={{...inp, resize: 'none'} as React.CSSProperties} rows={2} value={novoLanc.observacao} onChange={e => setNovoLanc({...novoLanc, observacao: e.target.value})} /></div>
-                  <div style={{ gridColumn: '1/-1' }}><button type="submit" style={{ ...btn(c.green), width: '100%', padding: '12px', fontSize: 14 }}>+ Adicionar lançamento</button></div>
+                  {permissoes.adicionar && <div style={{ gridColumn: '1/-1' }}><button type="submit" style={{ ...btn(c.green), width: '100%', padding: '12px', fontSize: 14 }}>+ Adicionar lançamento</button></div>}
                 </form>
               </div>
 
@@ -617,8 +632,8 @@ export default function Dashboard() {
                           <td style={{ padding: '12px 16px' }}><span style={{ backgroundColor: l.tipo === 'entrada' ? c.greenLight : c.redLight, color: l.tipo === 'entrada' ? c.greenText : c.red, padding: '3px 10px', borderRadius: 99, fontSize: 11, fontWeight: 700 }}>{l.tipo === 'entrada' ? 'Entrada' : 'Saída'}</span></td>
                           <td style={{ padding: '12px 16px' }} onClick={e => e.stopPropagation()}>
                             <div style={{ display: 'flex', gap: 6 }}>
-                              <BtnAcao label="Editar" onClick={() => setEditandoLanc(l)} />
-                              <BtnAcao label="Excluir" danger onClick={() => excluirLanc(l.id)} />
+                              {permissoes.editar && <BtnAcao label="Editar" onClick={() => setEditandoLanc(l)} />}
+                              {permissoes.excluir && <BtnAcao label="Excluir" danger onClick={() => excluirLanc(l.id)} />}
                             </div>
                           </td>
                         </tr>
@@ -662,7 +677,7 @@ export default function Dashboard() {
                   <div><label style={lbl}>Qtd mínima</label><input required type="number" style={inp} value={novoProd.quantidade_minima} onChange={e => setNovoProd({...novoProd, quantidade_minima: e.target.value})} /></div>
                   <div><label style={lbl}>Preço custo (R$)</label><input required type="number" step="0.01" style={inp} value={novoProd.preco_custo} onChange={e => setNovoProd({...novoProd, preco_custo: e.target.value})} /></div>
                   <div><label style={lbl}>Preço venda (R$)</label><input required type="number" step="0.01" style={inp} value={novoProd.preco_venda} onChange={e => setNovoProd({...novoProd, preco_venda: e.target.value})} /></div>
-                  <div style={{ gridColumn: '1/-1' }}><button type="submit" style={{ ...btn(c.green), width: '100%', padding: '12px', fontSize: 14 }}>+ Adicionar produto</button></div>
+                  {permissoes.adicionar && <div style={{ gridColumn: '1/-1' }}><button type="submit" style={{ ...btn(c.green), width: '100%', padding: '12px', fontSize: 14 }}>+ Adicionar produto</button></div>}
                 </form>
               </div>
               <div style={{ ...card, padding: 0, overflow: 'hidden' }}>
@@ -687,8 +702,8 @@ export default function Dashboard() {
                             <td style={{ padding: '12px 16px' }}><span style={{ backgroundColor: sc.bg, color: sc.text, padding: '3px 10px', borderRadius: 99, fontSize: 11, fontWeight: 700 }}>{status}</span></td>
                             <td style={{ padding: '12px 16px' }}>
                               <div style={{ display: 'flex', gap: 6 }}>
-                                <BtnAcao label="Editar" onClick={() => setEditandoProd(p)} />
-                                <BtnAcao label="Excluir" danger onClick={() => excluirProd(p.id)} />
+                                {permissoes.editar && <BtnAcao label="Editar" onClick={() => setEditandoProd(p)} />}
+                                {permissoes.excluir && <BtnAcao label="Excluir" danger onClick={() => excluirProd(p.id)} />}
                               </div>
                             </td>
                           </tr>
@@ -733,7 +748,7 @@ export default function Dashboard() {
                   <div><label style={lbl}>Valor (R$)</label><input required type="number" step="0.01" style={inp} value={novaConta.valor} onChange={e => setNovaConta({...novaConta, valor: e.target.value})} /></div>
                   <div><label style={lbl}>Tipo</label><select style={inp} value={novaConta.tipo} onChange={e => setNovaConta({...novaConta, tipo: e.target.value})}><option value="pagar">A pagar</option><option value="receber">A receber</option></select></div>
                   <div><label style={lbl}>Vencimento</label><input required type="date" style={inp} value={novaConta.vencimento} onChange={e => setNovaConta({...novaConta, vencimento: e.target.value})} /></div>
-                  <div style={{ gridColumn: '1/-1' }}><button type="submit" style={{ ...btn(c.green), width: '100%', padding: '12px', fontSize: 14 }}>+ Adicionar conta</button></div>
+                  {permissoes.adicionar && <div style={{ gridColumn: '1/-1' }}><button type="submit" style={{ ...btn(c.green), width: '100%', padding: '12px', fontSize: 14 }}>+ Adicionar conta</button></div>}
                 </form>
               </div>
               <div style={{ ...card, padding: 0, overflow: 'hidden' }}>
@@ -754,9 +769,9 @@ export default function Dashboard() {
                             <td style={{ padding: '12px 16px' }}><span style={{ backgroundColor: ct.pago ? c.greenLight : vencida ? c.redLight : c.amberLight, color: ct.pago ? c.greenText : vencida ? c.red : c.amber, padding: '3px 10px', borderRadius: 99, fontSize: 11, fontWeight: 700 }}>{ct.pago ? 'Pago' : vencida ? 'Vencida' : 'Pendente'}</span></td>
                             <td style={{ padding: '12px 16px' }}>
                               <div style={{ display: 'flex', gap: 6 }}>
-                                <button onClick={() => marcarPago(ct.id, ct.pago)} style={{ backgroundColor: ct.pago ? c.subCard : c.greenLight, color: ct.pago ? c.txt2 : c.greenText, border: `1px solid ${c.border}`, padding: '4px 10px', borderRadius: 7, fontSize: 12, cursor: 'pointer', fontWeight: 600 }}>{ct.pago ? 'Desfazer' : 'Pago'}</button>
-                                <BtnAcao label="Editar" onClick={() => setEditandoConta(ct)} />
-                                <BtnAcao label="Excluir" danger onClick={() => excluirConta(ct.id)} />
+                                {permissoes.editar && <button onClick={() => marcarPago(ct.id, ct.pago)} style={{ backgroundColor: ct.pago ? c.subCard : c.greenLight, color: ct.pago ? c.txt2 : c.greenText, border: `1px solid ${c.border}`, padding: '4px 10px', borderRadius: 7, fontSize: 12, cursor: 'pointer', fontWeight: 600 }}>{ct.pago ? 'Desfazer' : 'Pago'}</button>}
+                                {permissoes.editar && <BtnAcao label="Editar" onClick={() => setEditandoConta(ct)} />}
+                                {permissoes.excluir && <BtnAcao label="Excluir" danger onClick={() => excluirConta(ct.id)} />}
                               </div>
                             </td>
                           </tr>
