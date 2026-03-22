@@ -33,6 +33,7 @@ export default function Dashboard() {
   const [clienteSelecionado, setClienteSelecionado] = useState<any>(null)
   const [editandoCliente, setEditandoCliente] = useState<any>(null)
   const [novoCliente, setNovoCliente] = useState({ nome: '', email: '', telefone: '', cpf_cnpj: '', tipo: 'cliente', observacao: '' })
+  const [editandoMembro, setEditandoMembro] = useState<any>(null)
   const [membros, setMembros] = useState<any[]>([])
   const [novoMembro, setNovoMembro] = useState({ 
     nome: '', email: '', papel: 'funcionario', acesso: 'funcionario',
@@ -1015,11 +1016,22 @@ export default function Dashboard() {
                     papel: novoMembro.papel,
                     acesso: novoMembro.acesso,
                     empresa_user_id: user?.id,
-                    ativo: false
+                    ativo: false,
+                    permissoes: JSON.stringify({
+                      ver_fluxo: novoMembro.ver_fluxo,
+                      ver_estoque: novoMembro.ver_estoque,
+                      ver_contas: novoMembro.ver_contas,
+                      ver_dre: novoMembro.ver_dre,
+                      ver_metas: novoMembro.ver_metas,
+                      ver_clientes: novoMembro.ver_clientes,
+                      adicionar: novoMembro.adicionar,
+                      editar: novoMembro.editar,
+                      excluir: novoMembro.excluir,
+                    })
                   })
                   const linkConvite = `${window.location.origin}/cadastro?convite=${token}&email=${encodeURIComponent(novoMembro.email)}`
                   await navigator.clipboard.writeText(linkConvite)
-                  setNovoMembro({ nome: '', email: '', papel: 'funcionario', acesso: 'funcionario' })
+                  setNovoMembro({ nome: '', email: '', papel: 'funcionario', acesso: 'funcionario', ver_fluxo: true, ver_estoque: true, ver_contas: false, ver_dre: false, ver_metas: false, ver_clientes: true, adicionar: true, editar: false, excluir: false })
                   mostrarToast('Convite gerado! Link copiado para área de transferência!')
                   carregarDados()
                 }} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -1101,7 +1113,103 @@ export default function Dashboard() {
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px,1fr))', gap: 16 }}>
-                {/* Card do dono */}
+                {/* Modal editar membro */}
+              {editandoMembro && (
+                <Modal onClose={() => setEditandoMembro(null)}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                    <h2 style={{ fontSize: 18, fontWeight: 700, color: c.txt, margin: 0 }}>Editar permissões — {editandoMembro.nome}</h2>
+                    <button onClick={() => setEditandoMembro(null)} style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: c.txt3 }}>✕</button>
+                  </div>
+
+                  <div style={{ marginBottom: 16 }}>
+                    <label style={lbl}>Nível de acesso</label>
+                    <select style={inp} value={editandoMembro.acesso} onChange={e => {
+                      const acesso = e.target.value
+                      const perm = JSON.parse(editandoMembro.permissoes || '{}')
+                      if (acesso === 'admin') {
+                        setEditandoMembro({...editandoMembro, acesso, permissoes: JSON.stringify({...perm, ver_fluxo: true, ver_estoque: true, ver_contas: true, ver_dre: true, ver_metas: true, ver_clientes: true, ver_equipe: true, adicionar: true, editar: true, excluir: true})})
+                      } else if (acesso === 'gerente') {
+                        setEditandoMembro({...editandoMembro, acesso, permissoes: JSON.stringify({...perm, ver_fluxo: true, ver_estoque: true, ver_contas: true, ver_dre: false, ver_metas: true, ver_clientes: true, ver_equipe: false, adicionar: true, editar: true, excluir: false})})
+                      } else {
+                        setEditandoMembro({...editandoMembro, acesso, permissoes: JSON.stringify({...perm, ver_fluxo: true, ver_estoque: true, ver_contas: false, ver_dre: false, ver_metas: false, ver_clientes: true, ver_equipe: false, adicionar: true, editar: false, excluir: false})})
+                      }
+                    }}>
+                      <option value="funcionario">Básico</option>
+                      <option value="gerente">Gerente</option>
+                      <option value="admin">Admin — acesso total</option>
+                    </select>
+                  </div>
+
+                  <div style={{ backgroundColor: c.subCard, borderRadius: 12, padding: 16, border: `1px solid ${c.border}`, marginBottom: 16 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                      <div>
+                        <p style={{ fontSize: 11, fontWeight: 700, color: c.txt3, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>Páginas visíveis</p>
+                        {[
+                          { key: 'ver_fluxo', label: 'Fluxo de Caixa' },
+                          { key: 'ver_estoque', label: 'Estoque' },
+                          { key: 'ver_contas', label: 'Contas' },
+                          { key: 'ver_dre', label: 'DRE' },
+                          { key: 'ver_metas', label: 'Metas' },
+                          { key: 'ver_clientes', label: 'Clientes' },
+                          { key: 'ver_equipe', label: 'Equipe' },
+                        ].map(p => {
+                          const perm = JSON.parse(editandoMembro.permissoes || '{}')
+                          return (
+                            <div key={p.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                              <span style={{ fontSize: 13, color: c.txt2 }}>{p.label}</span>
+                              <div onClick={() => {
+                                const perm = JSON.parse(editandoMembro.permissoes || '{}')
+                                setEditandoMembro({...editandoMembro, permissoes: JSON.stringify({...perm, [p.key]: !perm[p.key]})})
+                              }}
+                                style={{ width: 40, height: 22, borderRadius: 99, backgroundColor: perm[p.key] ? c.green : c.border, cursor: 'pointer', position: 'relative', transition: 'background 0.2s' }}>
+                                <div style={{ position: 'absolute', top: 3, left: perm[p.key] ? 20 : 3, width: 16, height: 16, borderRadius: '50%', backgroundColor: 'white', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+
+                      <div>
+                        <p style={{ fontSize: 11, fontWeight: 700, color: c.txt3, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>Ações permitidas</p>
+                        {[
+                          { key: 'adicionar', label: 'Adicionar' },
+                          { key: 'editar', label: 'Editar' },
+                          { key: 'excluir', label: 'Excluir' },
+                        ].map(p => {
+                          const perm = JSON.parse(editandoMembro.permissoes || '{}')
+                          return (
+                            <div key={p.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                              <span style={{ fontSize: 13, color: c.txt2 }}>{p.label}</span>
+                              <div onClick={() => {
+                                const perm = JSON.parse(editandoMembro.permissoes || '{}')
+                                setEditandoMembro({...editandoMembro, permissoes: JSON.stringify({...perm, [p.key]: !perm[p.key]})})
+                              }}
+                                style={{ width: 40, height: 22, borderRadius: 99, backgroundColor: perm[p.key] ? c.green : c.border, cursor: 'pointer', position: 'relative', transition: 'background 0.2s' }}>
+                                <div style={{ position: 'absolute', top: 3, left: perm[p.key] ? 20 : 3, width: 16, height: 16, borderRadius: '50%', backgroundColor: 'white', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: 10 }}>
+                    <button onClick={() => setEditandoMembro(null)} style={{ ...btn(c.subCard, c.txt2), flex: 1, border: `1px solid ${c.border}` }}>Cancelar</button>
+                    <button onClick={async () => {
+                      await supabase.from('membros').update({
+                        acesso: editandoMembro.acesso,
+                        permissoes: editandoMembro.permissoes
+                      }).eq('id', editandoMembro.id)
+                      setEditandoMembro(null)
+                      mostrarToast('Permissões atualizadas!')
+                      carregarDados()
+                    }} style={{ ...btn(c.green), flex: 1 }}>Salvar permissões</button>
+                  </div>
+                </Modal>
+              )}
+
+              {/* Card do dono */}
                 <div style={{ ...card, border: `1px solid ${dark ? 'rgba(45,155,106,0.5)' : 'rgba(45,155,106,0.3)'}` }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
                     <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'linear-gradient(135deg, #2d9b6a, #1a4731)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 800, fontSize: 16 }}>
@@ -1130,12 +1238,16 @@ export default function Dashboard() {
                           <p style={{ fontSize: 12, color: c.txt3, margin: 0 }}>{m.email}</p>
                         </div>
                       </div>
-                      <button onClick={async () => {
-                        if (!confirm('Remover membro?')) return
-                        await supabase.from('membros').delete().eq('id', m.id)
-                        mostrarToast('Membro removido!')
-                        carregarDados()
-                      }} style={{ backgroundColor: c.redLight, color: c.red, border: 'none', padding: '4px 8px', borderRadius: 7, fontSize: 11, cursor: 'pointer', fontWeight: 600 }}>✕</button>
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <button onClick={() => setEditandoMembro({...m, permissoes: m.permissoes || JSON.stringify({ver_fluxo: true, ver_estoque: true, ver_contas: false, ver_dre: false, ver_metas: false, ver_clientes: true, ver_equipe: false, adicionar: true, editar: false, excluir: false})})}
+                          style={{ backgroundColor: c.greenLight, color: c.greenText, border: 'none', padding: '4px 10px', borderRadius: 7, fontSize: 11, cursor: 'pointer', fontWeight: 600 }}>Editar</button>
+                        <button onClick={async () => {
+                          if (!confirm('Remover membro?')) return
+                          await supabase.from('membros').delete().eq('id', m.id)
+                          mostrarToast('Membro removido!')
+                          carregarDados()
+                        }} style={{ backgroundColor: c.redLight, color: c.red, border: 'none', padding: '4px 8px', borderRadius: 7, fontSize: 11, cursor: 'pointer', fontWeight: 600 }}>✕</button>
+                      </div>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <span style={{ backgroundColor: c.subCard, color: c.txt2, padding: '3px 10px', borderRadius: 99, fontSize: 11, fontWeight: 600, border: `1px solid ${c.border}`, textTransform: 'capitalize' }}>{m.papel}</span>
