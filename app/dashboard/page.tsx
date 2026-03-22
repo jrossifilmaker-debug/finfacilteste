@@ -321,7 +321,7 @@ export default function Dashboard() {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: menuAberto ? 'space-between' : 'center', padding: '22px 16px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
           {menuAberto && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div style={{ width: 32, height: 32, borderRadius: 9, backgroundColor: '#2d9b6a', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>₣</div>
+              <img src="/logo.png" alt="FinFácil" style={{ width: 32, height: 32, borderRadius: 9, objectFit: 'contain' }} />
               <span style={{ color: 'white', fontWeight: 800, fontSize: 18, letterSpacing: '-0.3px' }}>FinFácil</span>
             </div>
           )}

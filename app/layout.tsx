@@ -6,6 +6,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <title>FinFácil — Gestão financeira para pequenas empresas</title>
         <meta name="description" content="Controle seu fluxo de caixa, estoque, contas e muito mais." />
+        <link rel="icon" href="/logo.png" />
       </head>
       <body>{children}</body>
     </html>
