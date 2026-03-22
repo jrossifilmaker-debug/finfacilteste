@@ -34,7 +34,12 @@ export default function Dashboard() {
   const [editandoCliente, setEditandoCliente] = useState<any>(null)
   const [novoCliente, setNovoCliente] = useState({ nome: '', email: '', telefone: '', cpf_cnpj: '', tipo: 'cliente', observacao: '' })
   const [membros, setMembros] = useState<any[]>([])
-  const [novoMembro, setNovoMembro] = useState({ nome: '', email: '', papel: 'funcionario', acesso: 'funcionario' })
+  const [novoMembro, setNovoMembro] = useState({ 
+    nome: '', email: '', papel: 'funcionario', acesso: 'funcionario',
+    ver_fluxo: true, ver_estoque: true, ver_contas: false, 
+    ver_dre: false, ver_metas: false, ver_clientes: true,
+    adicionar: true, editar: false, excluir: false
+  })
   const [novoLanc, setNovoLanc] = useState({ descricao: '', valor: '', tipo: 'entrada', categoria: 'Vendas', produto_id: '', quantidade_vendida: '', forma_pagamento: 'dinheiro', cliente_id: '', observacao: '' })
   const [novoProd, setNovoProd] = useState({ nome: '', quantidade: '', quantidade_minima: '', preco_custo: '', preco_venda: '' })
   const [novaConta, setNovaConta] = useState({ descricao: '', valor: '', tipo: 'pagar', categoria: 'Fornecedores', vencimento: '' })
@@ -1017,25 +1022,81 @@ export default function Dashboard() {
                   setNovoMembro({ nome: '', email: '', papel: 'funcionario', acesso: 'funcionario' })
                   mostrarToast('Convite gerado! Link copiado para área de transferência!')
                   carregarDados()
-                }} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 12 }}>
-                  <div><label style={lbl}>Nome</label><input required placeholder="Ex: João Silva" style={inp} value={novoMembro.nome} onChange={e => setNovoMembro({...novoMembro, nome: e.target.value})} /></div>
-                  <div><label style={lbl}>E-mail</label><input required type="email" placeholder="email@exemplo.com" style={inp} value={novoMembro.email} onChange={e => setNovoMembro({...novoMembro, email: e.target.value})} /></div>
-                  <div><label style={lbl}>Cargo</label>
-                    <select style={inp} value={novoMembro.papel} onChange={e => setNovoMembro({...novoMembro, papel: e.target.value})}>
-                      <option value="funcionario">Funcionário</option>
-                      <option value="gerente">Gerente</option>
-                      <option value="financeiro">Financeiro</option>
-                      <option value="vendedor">Vendedor</option>
-                    </select>
+                }} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 12 }}>
+                    <div><label style={lbl}>Nome</label><input required placeholder="Ex: João Silva" style={inp} value={novoMembro.nome} onChange={e => setNovoMembro({...novoMembro, nome: e.target.value})} /></div>
+                    <div><label style={lbl}>E-mail</label><input required type="email" placeholder="email@exemplo.com" style={inp} value={novoMembro.email} onChange={e => setNovoMembro({...novoMembro, email: e.target.value})} /></div>
+                    <div><label style={lbl}>Cargo</label>
+                      <select style={inp} value={novoMembro.papel} onChange={e => setNovoMembro({...novoMembro, papel: e.target.value})}>
+                        <option value="funcionario">Funcionário</option>
+                        <option value="gerente">Gerente</option>
+                        <option value="financeiro">Financeiro</option>
+                        <option value="vendedor">Vendedor</option>
+                      </select>
+                    </div>
+                    <div><label style={lbl}>Nível de acesso</label>
+                      <select style={inp} value={novoMembro.acesso} onChange={e => {
+                        const acesso = e.target.value
+                        if (acesso === 'admin') {
+                          setNovoMembro({...novoMembro, acesso, ver_fluxo: true, ver_estoque: true, ver_contas: true, ver_dre: true, ver_metas: true, ver_clientes: true, adicionar: true, editar: true, excluir: true})
+                        } else if (acesso === 'gerente') {
+                          setNovoMembro({...novoMembro, acesso, ver_fluxo: true, ver_estoque: true, ver_contas: true, ver_dre: false, ver_metas: true, ver_clientes: true, adicionar: true, editar: true, excluir: false})
+                        } else {
+                          setNovoMembro({...novoMembro, acesso, ver_fluxo: true, ver_estoque: true, ver_contas: false, ver_dre: false, ver_metas: false, ver_clientes: true, adicionar: true, editar: false, excluir: false})
+                        }
+                      }}>
+                        <option value="funcionario">Básico</option>
+                        <option value="gerente">Gerente</option>
+                        <option value="admin">Admin — acesso total</option>
+                      </select>
+                    </div>
                   </div>
-                  <div><label style={lbl}>Acesso</label>
-                    <select style={inp} value={novoMembro.acesso} onChange={e => setNovoMembro({...novoMembro, acesso: e.target.value})}>
-                      <option value="funcionario">Básico — só lançamentos</option>
-                      <option value="gerente">Gerente — sem financeiro</option>
-                      <option value="admin">Admin — acesso total</option>
-                    </select>
+
+                  {/* Permissões detalhadas */}
+                  <div style={{ backgroundColor: c.subCard, borderRadius: 12, padding: 16, border: `1px solid ${c.border}` }}>
+                    <p style={{ fontSize: 13, fontWeight: 700, color: c.txt, marginBottom: 14, marginTop: 0 }}>Permissões detalhadas</p>
+                    
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                      <div>
+                        <p style={{ fontSize: 11, fontWeight: 700, color: c.txt3, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>Páginas visíveis</p>
+                        {[
+                          { key: 'ver_fluxo', label: 'Fluxo de Caixa' },
+                          { key: 'ver_estoque', label: 'Estoque' },
+                          { key: 'ver_contas', label: 'Contas a pagar/receber' },
+                          { key: 'ver_dre', label: 'DRE — Demonstrativo' },
+                          { key: 'ver_metas', label: 'Metas financeiras' },
+                          { key: 'ver_clientes', label: 'Clientes e fornecedores' },
+                        ].map(p => (
+                          <div key={p.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                            <span style={{ fontSize: 13, color: c.txt2 }}>{p.label}</span>
+                            <div onClick={() => setNovoMembro({...novoMembro, [p.key]: !(novoMembro as any)[p.key]})}
+                              style={{ width: 40, height: 22, borderRadius: 99, backgroundColor: (novoMembro as any)[p.key] ? c.green : c.border, cursor: 'pointer', position: 'relative', transition: 'background 0.2s' }}>
+                              <div style={{ position: 'absolute', top: 3, left: (novoMembro as any)[p.key] ? 20 : 3, width: 16, height: 16, borderRadius: '50%', backgroundColor: 'white', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div>
+                        <p style={{ fontSize: 11, fontWeight: 700, color: c.txt3, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>Ações permitidas</p>
+                        {[
+                          { key: 'adicionar', label: 'Adicionar registros' },
+                          { key: 'editar', label: 'Editar registros' },
+                          { key: 'excluir', label: 'Excluir registros' },
+                        ].map(p => (
+                          <div key={p.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                            <span style={{ fontSize: 13, color: c.txt2 }}>{p.label}</span>
+                            <div onClick={() => setNovoMembro({...novoMembro, [p.key]: !(novoMembro as any)[p.key]})}
+                              style={{ width: 40, height: 22, borderRadius: 99, backgroundColor: (novoMembro as any)[p.key] ? c.green : c.border, cursor: 'pointer', position: 'relative', transition: 'background 0.2s' }}>
+                              <div style={{ position: 'absolute', top: 3, left: (novoMembro as any)[p.key] ? 20 : 3, width: 16, height: 16, borderRadius: '50%', backgroundColor: 'white', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   </div>
-                  <div style={{ gridColumn: '1/-1' }}><button type="submit" style={{ ...btn(c.green), width: '100%', padding: '12px', fontSize: 14 }}>+ Convidar membro</button></div>
+
+                  <button type="submit" style={{ ...btn(c.green), width: '100%', padding: '12px', fontSize: 14 }}>+ Convidar membro</button>
                 </form>
               </div>
 
