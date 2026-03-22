@@ -56,6 +56,7 @@ export default function Dashboard() {
     adicionar: true, editar: true, excluir: true, is_owner: true
   })
   const [empresaUserId, setEmpresaUserId] = useState<string | null>(null)
+  const [isOwner, setIsOwner] = useState(true)
 
   const SIDEBAR_W = menuAberto ? 220 : 60
 
@@ -121,9 +122,10 @@ export default function Dashboard() {
 
     // Verificar se é funcionário e carregar permissões
     const { data: membroAtual } = await supabase.from('membros').select('*').eq('email', user.email).single()
-    if (membroAtual && membroAtual.permissoes) {
-      const perm = JSON.parse(membroAtual.permissoes)
+    if (membroAtual) {
+      const perm = membroAtual.permissoes ? JSON.parse(membroAtual.permissoes) : { ver_fluxo: true, ver_estoque: true, ver_contas: false, ver_dre: false, ver_metas: false, ver_clientes: true, ver_equipe: false, adicionar: true, editar: false, excluir: false }
       setPermissoes({ ...perm, is_owner: false })
+      setIsOwner(false)
       // Salvar user_id do funcionário na tabela membros
       await supabase.from('membros').update({ user_id: user.id }).eq('email', user.email)
       // Usar o user_id da empresa para carregar os dados
@@ -141,6 +143,7 @@ export default function Dashboard() {
       setClientes(cliF || [])
     } else {
       setEmpresaUserId(user.id)
+      setIsOwner(true)
       setPermissoes({ ver_fluxo: true, ver_estoque: true, ver_contas: true, ver_dre: true, ver_metas: true, ver_clientes: true, ver_equipe: true, adicionar: true, editar: true, excluir: true, is_owner: true })
     }
   }
@@ -649,7 +652,7 @@ export default function Dashboard() {
                           <td style={{ padding: '12px 16px' }} onClick={e => e.stopPropagation()}>
                             <div style={{ display: 'flex', gap: 6 }}>
                               {permissoes.editar && <BtnAcao label="Editar" onClick={() => setEditandoLanc(l)} />}
-                              {permissoes.excluir && <BtnAcao label="Excluir" danger onClick={() => excluirLanc(l.id)} />}
+                              {isOwner && <BtnAcao label="Excluir" danger onClick={() => excluirLanc(l.id)} />}
                             </div>
                           </td>
                         </tr>
@@ -719,7 +722,7 @@ export default function Dashboard() {
                             <td style={{ padding: '12px 16px' }}>
                               <div style={{ display: 'flex', gap: 6 }}>
                                 {permissoes.editar && <BtnAcao label="Editar" onClick={() => setEditandoProd(p)} />}
-                                {permissoes.excluir && <BtnAcao label="Excluir" danger onClick={() => excluirProd(p.id)} />}
+                                {isOwner && <BtnAcao label="Excluir" danger onClick={() => excluirProd(p.id)} />}
                               </div>
                             </td>
                           </tr>
@@ -787,7 +790,7 @@ export default function Dashboard() {
                               <div style={{ display: 'flex', gap: 6 }}>
                                 {permissoes.editar && <button onClick={() => marcarPago(ct.id, ct.pago)} style={{ backgroundColor: ct.pago ? c.subCard : c.greenLight, color: ct.pago ? c.txt2 : c.greenText, border: `1px solid ${c.border}`, padding: '4px 10px', borderRadius: 7, fontSize: 12, cursor: 'pointer', fontWeight: 600 }}>{ct.pago ? 'Desfazer' : 'Pago'}</button>}
                                 {permissoes.editar && <BtnAcao label="Editar" onClick={() => setEditandoConta(ct)} />}
-                                {permissoes.excluir && <BtnAcao label="Excluir" danger onClick={() => excluirConta(ct.id)} />}
+                                {isOwner && <BtnAcao label="Excluir" danger onClick={() => excluirConta(ct.id)} />}
                               </div>
                             </td>
                           </tr>
@@ -823,7 +826,7 @@ export default function Dashboard() {
                     <div key={m.id} style={card}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
                         <div><p style={{ fontWeight: 700, color: c.txt, margin: 0 }}>{m.descricao}</p><p style={{ fontSize: 12, color: c.txt3, margin: 0 }}>{m.mes} — {m.tipo === 'entrada' ? 'Entradas' : 'Saídas'}</p></div>
-                        <BtnAcao label="Excluir" danger onClick={() => excluirMeta(m.id)} />
+                        {isOwner && <BtnAcao label="Excluir" danger onClick={() => excluirMeta(m.id)} />}
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 8 }}>
                         <span style={{ color: c.txt2 }}>Atual: <strong style={{ color: c.greenText }}>{fmt(atual)}</strong></span>
