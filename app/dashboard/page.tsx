@@ -996,16 +996,26 @@ export default function Dashboard() {
                 <form onSubmit={async (e) => {
                   e.preventDefault()
                   const { data: { user } } = await supabase.auth.getUser()
+                  const token = Math.random().toString(36).substring(2) + Date.now().toString(36)
+                  await supabase.from('convites').insert({
+                    email: novoMembro.email,
+                    token,
+                    empresa_user_id: user?.id,
+                    papel: novoMembro.papel,
+                    acesso: novoMembro.acesso,
+                  })
                   await supabase.from('membros').insert({
                     nome: novoMembro.nome,
                     email: novoMembro.email,
                     papel: novoMembro.papel,
                     acesso: novoMembro.acesso,
                     empresa_user_id: user?.id,
-                    ativo: true
+                    ativo: false
                   })
+                  const linkConvite = `${window.location.origin}/cadastro?convite=${token}&email=${encodeURIComponent(novoMembro.email)}`
+                  await navigator.clipboard.writeText(linkConvite)
                   setNovoMembro({ nome: '', email: '', papel: 'funcionario', acesso: 'funcionario' })
-                  mostrarToast('Membro adicionado!')
+                  mostrarToast('Convite gerado! Link copiado para área de transferência!')
                   carregarDados()
                 }} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 12 }}>
                   <div><label style={lbl}>Nome</label><input required placeholder="Ex: João Silva" style={inp} value={novoMembro.nome} onChange={e => setNovoMembro({...novoMembro, nome: e.target.value})} /></div>
@@ -1025,7 +1035,7 @@ export default function Dashboard() {
                       <option value="admin">Admin — acesso total</option>
                     </select>
                   </div>
-                  <div style={{ gridColumn: '1/-1' }}><button type="submit" style={{ ...btn(c.green), width: '100%', padding: '12px', fontSize: 14 }}>+ Adicionar membro</button></div>
+                  <div style={{ gridColumn: '1/-1' }}><button type="submit" style={{ ...btn(c.green), width: '100%', padding: '12px', fontSize: 14 }}>+ Convidar membro</button></div>
                 </form>
               </div>
 
