@@ -47,8 +47,8 @@ export default function Dashboard() {
   // Paleta de cores
   const c = {
     // Backgrounds
-    bg: dark ? '#0f1923' : '#f5f0eb',
-    sidebar: dark ? '#0d1520' : '#1a4731',
+    bg: dark ? '#0a1628' : '#e8f0e9',
+    sidebar: dark ? 'rgba(13,21,32,0.85)' : 'rgba(26,71,49,0.92)',
     card: dark ? '#1a2535' : '#ffffff',
     cardAlt: dark ? '#1f2d40' : '#faf7f4',
     subCard: dark ? '#243044' : '#f5f0eb',
@@ -68,7 +68,7 @@ export default function Dashboard() {
     amberLight: dark ? '#3d2e0a' : '#fef8ee',
     blue: '#2563eb',
     // Header
-    header: dark ? '#111827' : '#ffffff',
+    header: dark ? 'rgba(17,24,39,0.8)' : 'rgba(255,255,255,0.75)',
     headerBorder: dark ? '#1e2d3d' : '#ede8e2',
   }
 
@@ -305,7 +305,7 @@ export default function Dashboard() {
   )
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: c.bg, fontFamily: "'Inter', -apple-system, sans-serif", backgroundImage: dark ? 'radial-gradient(ellipse at 20% 50%, rgba(45,106,79,0.08) 0%, transparent 60%), radial-gradient(ellipse at 80% 20%, rgba(45,155,106,0.05) 0%, transparent 50%)' : 'radial-gradient(ellipse at 20% 50%, rgba(45,106,79,0.06) 0%, transparent 60%), radial-gradient(ellipse at 80% 20%, rgba(45,155,106,0.04) 0%, transparent 50%)' }}>
+    <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: c.bg, fontFamily: "'Inter', -apple-system, sans-serif", backgroundImage: dark ? 'radial-gradient(ellipse at 10% 20%, rgba(45,155,106,0.25) 0%, transparent 50%), radial-gradient(ellipse at 90% 80%, rgba(20,83,45,0.3) 0%, transparent 50%)' : 'radial-gradient(ellipse at 10% 20%, rgba(45,155,106,0.2) 0%, transparent 50%), radial-gradient(ellipse at 90% 80%, rgba(134,239,172,0.25) 0%, transparent 50%)' }}>
 
       {toast && (
         <div style={{ position: 'fixed', top: 20, right: 20, zIndex: 9999, backgroundColor: c.green, color: 'white', padding: '12px 20px', borderRadius: 12, boxShadow: '0 8px 24px rgba(45,106,79,0.4)', fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -384,7 +384,7 @@ export default function Dashboard() {
           </div>
         </header>
 
-        <main style={{ flex: 1, padding: 24, backgroundColor: c.bg }}>
+        <main style={{ flex: 1, padding: 24, backgroundColor: 'transparent' }}>
 
           {/* PAINEL */}
           {aba === 'painel' && (
@@ -397,7 +397,7 @@ export default function Dashboard() {
                   { label: 'Saldo atual', valor: fmt(saldo), cor: saldo >= 0 ? c.greenText : c.red, bg: c.card, seta: saldo >= 0 ? '↗' : '↘', setaCor: saldo >= 0 ? c.greenText : c.red },
                   { label: 'Estoque crítico', valor: `${produtosCriticos.length} itens`, cor: c.amber, bg: c.amberLight, seta: '⚠', setaCor: c.amber },
                 ].map(ct => (
-                  <div key={ct.label} style={{ backgroundColor: ct.bg, border: `1px solid ${c.border}`, borderRadius: 16, padding: '16px 18px', transition: 'transform 0.2s ease, box-shadow 0.2s ease' }}
+                  <div key={ct.label} style={{ backgroundColor: dark ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.6)', border: `1px solid ${dark ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.9)'}`, borderRadius: 16, padding: '16px 18px', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', transition: 'transform 0.2s ease, box-shadow 0.2s ease' }}
                     onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-3px)'; (e.currentTarget as HTMLDivElement).style.boxShadow = '0 8px 24px rgba(0,0,0,0.1)' }}
                     onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.transform = 'none'; (e.currentTarget as HTMLDivElement).style.boxShadow = 'none' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
