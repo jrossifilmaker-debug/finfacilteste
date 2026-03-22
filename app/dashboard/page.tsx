@@ -55,6 +55,7 @@ export default function Dashboard() {
     ver_dre: true, ver_metas: true, ver_clientes: true, ver_equipe: true,
     adicionar: true, editar: true, excluir: true, is_owner: true
   })
+  const [empresaUserId, setEmpresaUserId] = useState<string | null>(null)
 
   const SIDEBAR_W = menuAberto ? 220 : 60
 
@@ -123,8 +124,23 @@ export default function Dashboard() {
     if (membroAtual && membroAtual.permissoes) {
       const perm = JSON.parse(membroAtual.permissoes)
       setPermissoes({ ...perm, is_owner: false })
+      // Salvar user_id do funcionário na tabela membros
+      await supabase.from('membros').update({ user_id: user.id }).eq('email', user.email)
+      // Usar o user_id da empresa para carregar os dados
+      const donoId = membroAtual.empresa_user_id
+      setEmpresaUserId(donoId)
+      const { data: lancF } = await supabase.from('lancamentos').select('*').eq('user_id', donoId).order('created_at', { ascending: false })
+      setLancamentos(lancF || [])
+      const { data: prodF } = await supabase.from('produtos').select('*').eq('user_id', donoId)
+      setProdutos(prodF || [])
+      const { data: contF } = await supabase.from('contas').select('*').eq('user_id', donoId).order('vencimento', { ascending: true })
+      setContas(contF || [])
+      const { data: metF } = await supabase.from('metas').select('*').eq('user_id', donoId)
+      setMetas(metF || [])
+      const { data: cliF } = await supabase.from('clientes').select('*').eq('user_id', donoId).order('nome')
+      setClientes(cliF || [])
     } else {
-      // É o dono — acesso total
+      setEmpresaUserId(user.id)
       setPermissoes({ ver_fluxo: true, ver_estoque: true, ver_contas: true, ver_dre: true, ver_metas: true, ver_clientes: true, ver_equipe: true, adicionar: true, editar: true, excluir: true, is_owner: true })
     }
   }
@@ -137,7 +153,7 @@ export default function Dashboard() {
       tipo: novoLanc.tipo, categoria: novoLanc.categoria,
       forma_pagamento: novoLanc.forma_pagamento,
       cliente_id: novoLanc.cliente_id ? parseInt(novoLanc.cliente_id) : null,
-      observacao: novoLanc.observacao, user_id: user?.id,
+      observacao: novoLanc.observacao, user_id: empresaUserId || user?.id,
       data: new Date().toISOString().split('T')[0]
     }
     if (novoLanc.tipo === 'saida' && novoLanc.produto_id && novoLanc.quantidade_vendida) {
@@ -167,7 +183,7 @@ export default function Dashboard() {
   async function adicionarProduto(e: React.FormEvent) {
     e.preventDefault()
     const { data: { user } } = await supabase.auth.getUser()
-    await supabase.from('produtos').insert({ ...novoProd, quantidade: parseFloat(novoProd.quantidade), quantidade_minima: parseFloat(novoProd.quantidade_minima), preco_custo: parseFloat(novoProd.preco_custo), preco_venda: parseFloat(novoProd.preco_venda), user_id: user?.id })
+    await supabase.from('produtos').insert({ ...novoProd, quantidade: parseFloat(novoProd.quantidade), quantidade_minima: parseFloat(novoProd.quantidade_minima), preco_custo: parseFloat(novoProd.preco_custo), preco_venda: parseFloat(novoProd.preco_venda), user_id: empresaUserId || user?.id })
     setNovoProd({ nome: '', quantidade: '', quantidade_minima: '', preco_custo: '', preco_venda: '' }); mostrarToast('Produto adicionado!'); carregarDados()
   }
 
@@ -185,7 +201,7 @@ export default function Dashboard() {
   async function adicionarConta(e: React.FormEvent) {
     e.preventDefault()
     const { data: { user } } = await supabase.auth.getUser()
-    await supabase.from('contas').insert({ ...novaConta, valor: parseFloat(novaConta.valor), user_id: user?.id })
+    await supabase.from('contas').insert({ ...novaConta, valor: parseFloat(novaConta.valor), user_id: empresaUserId || user?.id })
     setNovaConta({ descricao: '', valor: '', tipo: 'pagar', categoria: 'Fornecedores', vencimento: '' }); mostrarToast('Conta adicionada!'); carregarDados()
   }
 
@@ -208,7 +224,7 @@ export default function Dashboard() {
   async function adicionarMeta(e: React.FormEvent) {
     e.preventDefault()
     const { data: { user } } = await supabase.auth.getUser()
-    await supabase.from('metas').insert({ ...novaMeta, valor_meta: parseFloat(novaMeta.valor_meta), user_id: user?.id })
+    await supabase.from('metas').insert({ ...novaMeta, valor_meta: parseFloat(novaMeta.valor_meta), user_id: empresaUserId || user?.id })
     setNovaMeta({ descricao: '', valor_meta: '', mes: '', tipo: 'entrada' }); mostrarToast('Meta adicionada!'); carregarDados()
   }
 
@@ -958,7 +974,7 @@ export default function Dashboard() {
                     <form onSubmit={async (e) => {
                       e.preventDefault()
                       const { data: { user } } = await supabase.auth.getUser()
-                      await supabase.from('clientes').insert({ ...novoCliente, user_id: user?.id })
+                      await supabase.from('clientes').insert({ ...novoCliente, user_id: empresaUserId || user?.id })
                       setNovoCliente({ nome: '', email: '', telefone: '', cpf_cnpj: '', tipo: 'cliente', observacao: '' })
                       mostrarToast('Cadastro adicionado!'); carregarDados()
                     }} style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12 }}>
