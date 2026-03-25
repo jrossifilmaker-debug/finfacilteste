@@ -8,12 +8,14 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 
 const MENU_ITEMS_ALL = [
   { id: 'painel', label: 'Painel', icon: '▦', perm: 'sempre' },
+  { id: 'orcamentos', label: 'Orçamentos', icon: '◫', perm: 'sempre' },
   { id: 'fluxo', label: 'Fluxo de Caixa', icon: '⇅', perm: 'ver_fluxo' },
   { id: 'estoque', label: 'Estoque', icon: '▤', perm: 'ver_estoque' },
   { id: 'contas', label: 'Contas', icon: '◉', perm: 'ver_contas' },
   { id: 'metas', label: 'Metas', icon: '◇', perm: 'ver_metas' },
   { id: 'dre', label: 'DRE', icon: '▤', perm: 'ver_dre' },
   { id: 'clientes', label: 'Clientes', icon: '◎', perm: 'ver_clientes' },
+  { id: 'fornecedores', label: 'Fornecedores', icon: '◬', perm: 'sempre' },
   { id: 'equipe', label: 'Equipe', icon: '◈', perm: 'ver_equipe' },
 ]
 
@@ -34,6 +36,14 @@ export default function Dashboard() {
   const [editandoCliente, setEditandoCliente] = useState<any>(null)
   const [novoCliente, setNovoCliente] = useState({ nome: '', email: '', telefone: '', cpf_cnpj: '', tipo: 'cliente', observacao: '' })
   const [editandoMembro, setEditandoMembro] = useState<any>(null)
+  const [orcamentos, setOrcamentos] = useState<any[]>([])
+  const [orcamentoAberto, setOrcamentoAberto] = useState<any>(null)
+  const [novoOrc, setNovoOrc] = useState({ descricao: '', equipamento: '', cliente_id: '', valor_mao_obra: '', forma_pagamento: 'dinheiro', observacao: '', eh_revisao: false, tipo: 'servico' })
+  const [orcItens, setOrcItens] = useState<any[]>([])
+  const [novoItem, setNovoItem] = useState({ produto_id: '', descricao: '', quantidade: '1', valor_unitario: '' })
+  const [fornecedores, setFornecedores] = useState<any[]>([])
+  const [novoFornecedor, setNovoFornecedor] = useState({ nome: '', email: '', telefone: '', cpf_cnpj: '', observacao: '', endereco: '', cidade: '', estado: '' })
+  const [lembretes, setLembretes] = useState<any[]>([])
   const [membros, setMembros] = useState<any[]>([])
   const [novoMembro, setNovoMembro] = useState({ 
     nome: '', email: '', papel: 'funcionario', acesso: 'funcionario',
@@ -119,6 +129,16 @@ export default function Dashboard() {
     setClientes(cli || [])
     const { data: mem } = await supabase.from('membros').select('*').eq('empresa_user_id', user.id)
     setMembros(mem || [])
+    const { data: orc } = await supabase.from('orcamentos').select('*').eq('user_id', user.id).order('created_at', { ascending: false })
+    setOrcamentos(orc || [])
+    const { data: forn } = await supabase.from('clientes').select('*').eq('user_id', user.id).eq('tipo', 'fornecedor').order('nome')
+    setFornecedores(forn || [])
+    // Lembretes de revisão
+    const hoje = new Date()
+    const em30dias = new Date()
+    em30dias.setDate(hoje.getDate() + 30)
+    const { data: lemb } = await supabase.from('orcamentos').select('*, clientes(nome)').eq('user_id', user.id).eq('eh_revisao', true).lte('proxima_revisao', em30dias.toISOString().split('T')[0]).eq('status', 'concluido')
+    setLembretes(lemb || [])
 
     // Verificar se é funcionário e carregar permissões
     const { data: membroAtual } = await supabase.from('membros').select('*').eq('email', user.email).single()
@@ -986,6 +1006,7 @@ export default function Dashboard() {
                       <div><label style={lbl}>E-mail</label><input type="email" placeholder="email@exemplo.com" style={inp} value={novoCliente.email} onChange={e => setNovoCliente({...novoCliente, email: e.target.value})} /></div>
                       <div><label style={lbl}>Telefone</label><input placeholder="(11) 99999-9999" style={inp} value={novoCliente.telefone} onChange={e => setNovoCliente({...novoCliente, telefone: e.target.value})} /></div>
                       <div><label style={lbl}>CPF/CNPJ</label><input placeholder="000.000.000-00" style={inp} value={novoCliente.cpf_cnpj} onChange={e => setNovoCliente({...novoCliente, cpf_cnpj: e.target.value})} /></div>
+                      <div style={{ gridColumn: '1/-1' }}><label style={lbl}>Endereço</label><input placeholder="Rua, número, bairro, cidade" style={inp} value={(novoCliente as any).endereco || ''} onChange={e => setNovoCliente({...novoCliente, endereco: e.target.value} as any)} /></div>
                       <div style={{ gridColumn: '1/-1' }}><button type="submit" style={{ ...btn(c.green), width: '100%', padding: '12px', fontSize: 14 }}>+ Adicionar cadastro</button></div>
                     </form>
                   </div>
@@ -1027,7 +1048,402 @@ export default function Dashboard() {
             </div>
           )}
 
-        {/* EQUIPE */}
+        {/* ORÇAMENTOS */}
+          {aba === 'orcamentos' && (
+            <div className="page-enter">
+              {orcamentoAberto ? (
+                <div>
+                  <button onClick={() => { setOrcamentoAberto(null); setOrcItens([]) }} style={{ ...btn(c.subCard, c.txt2), border: `1px solid ${c.border}`, marginBottom: 16 }}>← Voltar</button>
+
+                  <div style={{ ...card, marginBottom: 16 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
+                      <div>
+                        <h2 style={{ fontSize: 20, fontWeight: 800, color: c.txt, margin: 0 }}>Orçamento #{orcamentoAberto.id}</h2>
+                        <span style={{ fontSize: 12, color: c.txt3 }}>{orcamentoAberto.created_at?.split('T')[0]}</span>
+                      </div>
+                      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                        <span style={{ backgroundColor: orcamentoAberto.status === 'pago' ? c.greenLight : orcamentoAberto.status === 'aprovado' ? '#dbeafe' : orcamentoAberto.status === 'concluido' ? '#ede9fe' : c.amberLight, color: orcamentoAberto.status === 'pago' ? c.greenText : orcamentoAberto.status === 'aprovado' ? '#2563eb' : orcamentoAberto.status === 'concluido' ? '#7c3aed' : c.amber, padding: '4px 12px', borderRadius: 99, fontSize: 12, fontWeight: 700 }}>
+                          {orcamentoAberto.status === 'aguardando' ? 'Aguardando' : orcamentoAberto.status === 'aprovado' ? 'Aprovado' : orcamentoAberto.status === 'concluido' ? 'Concluído' : 'Pago'}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+                      <div style={{ backgroundColor: c.subCard, borderRadius: 10, padding: 12 }}>
+                        <p style={{ fontSize: 10, color: c.txt3, fontWeight: 700, textTransform: 'uppercase', margin: '0 0 3px' }}>Cliente</p>
+                        <p style={{ fontSize: 14, color: c.txt2, margin: 0 }}>{clientes.find(cl => cl.id === orcamentoAberto.cliente_id)?.nome || '-'}</p>
+                      </div>
+                      <div style={{ backgroundColor: c.subCard, borderRadius: 10, padding: 12 }}>
+                        <p style={{ fontSize: 10, color: c.txt3, fontWeight: 700, textTransform: 'uppercase', margin: '0 0 3px' }}>Equipamento</p>
+                        <p style={{ fontSize: 14, color: c.txt2, margin: 0 }}>{orcamentoAberto.equipamento || '-'}</p>
+                      </div>
+                      <div style={{ backgroundColor: c.subCard, borderRadius: 10, padding: 12 }}>
+                        <p style={{ fontSize: 10, color: c.txt3, fontWeight: 700, textTransform: 'uppercase', margin: '0 0 3px' }}>Serviço</p>
+                        <p style={{ fontSize: 14, color: c.txt2, margin: 0 }}>{orcamentoAberto.descricao || '-'}</p>
+                      </div>
+                      <div style={{ backgroundColor: c.subCard, borderRadius: 10, padding: 12 }}>
+                        <p style={{ fontSize: 10, color: c.txt3, fontWeight: 700, textTransform: 'uppercase', margin: '0 0 3px' }}>Revisão</p>
+                        <p style={{ fontSize: 14, color: c.txt2, margin: 0 }}>{orcamentoAberto.eh_revisao ? `✓ Próxima: ${orcamentoAberto.proxima_revisao || '-'}` : 'Não'}</p>
+                      </div>
+                    </div>
+
+                    {/* Itens */}
+                    <div style={{ marginBottom: 16 }}>
+                      <p style={{ fontSize: 13, fontWeight: 700, color: c.txt, marginBottom: 12 }}>Itens do orçamento</p>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto auto', gap: 8, marginBottom: 8, alignItems: 'end' }}>
+                        <div>
+                          <label style={lbl}>Produto do estoque</label>
+                          <select style={inp} value={novoItem.produto_id} onChange={e => {
+                            const p = produtos.find(p => p.id === parseInt(e.target.value))
+                            setNovoItem({...novoItem, produto_id: e.target.value, descricao: p?.nome || '', valor_unitario: p?.preco_venda?.toString() || ''})
+                          }}>
+                            <option value="">Selecione ou descreva manualmente</option>
+                            {produtos.map(p => <option key={p.id} value={p.id}>{p.nome} — {fmt(p.preco_venda)} (qtd: {p.quantidade})</option>)}
+                          </select>
+                        </div>
+                        <div>
+                          <label style={lbl}>Qtd</label>
+                          <input type="number" style={{...inp, width: 70}} value={novoItem.quantidade} onChange={e => setNovoItem({...novoItem, quantidade: e.target.value})} />
+                        </div>
+                        <div>
+                          <label style={lbl}>Valor unit.</label>
+                          <input type="number" step="0.01" style={{...inp, width: 100}} value={novoItem.valor_unitario} onChange={e => setNovoItem({...novoItem, valor_unitario: e.target.value})} />
+                        </div>
+                        <button onClick={async () => {
+                          if (!novoItem.valor_unitario) return
+                          const { data: { user } } = await supabase.auth.getUser()
+                          const total = parseFloat(novoItem.quantidade) * parseFloat(novoItem.valor_unitario)
+                          await supabase.from('orcamento_itens').insert({
+                            orcamento_id: orcamentoAberto.id,
+                            produto_id: novoItem.produto_id ? parseInt(novoItem.produto_id) : null,
+                            descricao: novoItem.descricao || novoItem.produto_id,
+                            quantidade: parseFloat(novoItem.quantidade),
+                            valor_unitario: parseFloat(novoItem.valor_unitario),
+                            valor_total: total,
+                            user_id: empresaUserId || user?.id
+                          })
+                          setNovoItem({ produto_id: '', descricao: '', quantidade: '1', valor_unitario: '' })
+                          const { data: itens } = await supabase.from('orcamento_itens').select('*').eq('orcamento_id', orcamentoAberto.id)
+                          setOrcItens(itens || [])
+                          mostrarToast('Item adicionado!')
+                        }} style={{ ...btn(c.green), padding: '9px 14px', alignSelf: 'flex-end' }}>+ Add</button>
+                      </div>
+
+                      {orcItens.map(item => (
+                        <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', backgroundColor: c.subCard, borderRadius: 8, marginBottom: 6 }}>
+                          <div>
+                            <p style={{ fontSize: 13, fontWeight: 600, color: c.txt, margin: 0 }}>{item.descricao || produtos.find(p => p.id === item.produto_id)?.nome || 'Item'}</p>
+                            <p style={{ fontSize: 11, color: c.txt3, margin: 0 }}>{item.quantidade}x {fmt(item.valor_unitario)}</p>
+                          </div>
+                          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                            <span style={{ fontSize: 14, fontWeight: 700, color: c.txt }}>{fmt(item.valor_total)}</span>
+                            <button onClick={async () => {
+                              await supabase.from('orcamento_itens').delete().eq('id', item.id)
+                              const { data: itens } = await supabase.from('orcamento_itens').select('*').eq('orcamento_id', orcamentoAberto.id)
+                              setOrcItens(itens || [])
+                            }} style={{ backgroundColor: c.redLight, color: c.red, border: 'none', padding: '4px 8px', borderRadius: 6, fontSize: 11, cursor: 'pointer' }}>✕</button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Totais */}
+                    <div style={{ backgroundColor: c.subCard, borderRadius: 12, padding: 16, marginBottom: 16 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                        <span style={{ color: c.txt2, fontSize: 13 }}>Subtotal peças</span>
+                        <span style={{ fontWeight: 600, color: c.txt }}>{fmt(orcItens.reduce((a, i) => a + Number(i.valor_total), 0))}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, alignItems: 'center' }}>
+                        <span style={{ color: c.txt2, fontSize: 13 }}>Mão de obra</span>
+                        <input type="number" step="0.01" placeholder="0,00" style={{...inp, width: 120, textAlign: 'right'}}
+                          value={orcamentoAberto.valor_mao_obra || ''}
+                          onChange={async e => {
+                            const val = parseFloat(e.target.value) || 0
+                            setOrcamentoAberto({...orcamentoAberto, valor_mao_obra: val})
+                            await supabase.from('orcamentos').update({ valor_mao_obra: val }).eq('id', orcamentoAberto.id)
+                          }} />
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 8, borderTop: `1px solid ${c.border}` }}>
+                        <span style={{ fontWeight: 700, color: c.txt, fontSize: 15 }}>Total</span>
+                        <span style={{ fontWeight: 800, color: c.greenText, fontSize: 18 }}>{fmt(orcItens.reduce((a, i) => a + Number(i.valor_total), 0) + Number(orcamentoAberto.valor_mao_obra || 0))}</span>
+                      </div>
+                    </div>
+
+                    {/* Ações de status */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 8, marginBottom: 12 }}>
+                      {['aguardando','aprovado','concluido','pago'].map(s => (
+                        <button key={s} onClick={async () => {
+                          await supabase.from('orcamentos').update({ status: s }).eq('id', orcamentoAberto.id)
+                          setOrcamentoAberto({...orcamentoAberto, status: s})
+                          mostrarToast(`Status: ${s}!`)
+                        }} style={{ ...btn(orcamentoAberto.status === s ? c.green : c.subCard, orcamentoAberto.status === s ? 'white' : c.txt2), border: `1px solid ${c.border}`, fontSize: 12, padding: '8px' }}>
+                          {s === 'aguardando' ? 'Aguardando' : s === 'aprovado' ? 'Aprovado' : s === 'concluido' ? 'Concluído' : 'Pago'}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Converter em lançamento */}
+                    {orcamentoAberto.status === 'pago' && (
+                      <button onClick={async () => {
+                        if (!confirm('Converter em lançamento e dar baixa no estoque?')) return
+                        const { data: { user } } = await supabase.auth.getUser()
+                        const total = orcItens.reduce((a, i) => a + Number(i.valor_total), 0) + Number(orcamentoAberto.valor_mao_obra || 0)
+                        const cliente = clientes.find(cl => cl.id === orcamentoAberto.cliente_id)
+                        await supabase.from('lancamentos').insert({
+                          descricao: `Orçamento #${orcamentoAberto.id} — ${cliente?.nome || 'Cliente'} — ${orcamentoAberto.equipamento || ''}`,
+                          valor: total,
+                          tipo: 'entrada',
+                          categoria: 'Vendas',
+                          forma_pagamento: orcamentoAberto.forma_pagamento || 'dinheiro',
+                          cliente_id: orcamentoAberto.cliente_id,
+                          observacao: orcamentoAberto.descricao,
+                          user_id: empresaUserId || user?.id,
+                          data: new Date().toISOString().split('T')[0]
+                        })
+                        // Dar baixa no estoque
+                        for (const item of orcItens) {
+                          if (item.produto_id) {
+                            const produto = produtos.find(p => p.id === item.produto_id)
+                            if (produto) {
+                              await supabase.from('produtos').update({ quantidade: produto.quantidade - item.quantidade }).eq('id', item.produto_id)
+                            }
+                          }
+                        }
+                        // Marcar revisão
+                        if (orcamentoAberto.eh_revisao) {
+                          const proxima = new Date()
+                          proxima.setMonth(proxima.getMonth() + 6)
+                          await supabase.from('orcamentos').update({ data_revisao: new Date().toISOString().split('T')[0], proxima_revisao: proxima.toISOString().split('T')[0], status: 'concluido' }).eq('id', orcamentoAberto.id)
+                        }
+                        mostrarToast('Lançamento criado e estoque atualizado!')
+                        carregarDados()
+                        setOrcamentoAberto(null)
+                        setOrcItens([])
+                      }} style={{ ...btn(c.green), width: '100%', padding: 14, fontSize: 15, marginBottom: 8 }}>
+                        ✓ Converter em lançamento e dar baixa no estoque
+                      </button>
+                    )}
+
+                    {/* Exportar PDF */}
+                    <button onClick={async () => {
+                      const { default: jsPDF } = await import('jspdf')
+                      const { default: autoTable } = await import('jspdf-autotable')
+                      const doc = new jsPDF()
+                      const cliente = clientes.find(cl => cl.id === orcamentoAberto.cliente_id)
+                      const empresa = usuario?.user_metadata?.empresa || 'Empresa'
+                      doc.setFontSize(20)
+                      doc.setTextColor(45, 106, 79)
+                      doc.text(empresa, 14, 20)
+                      doc.setFontSize(11)
+                      doc.setTextColor(100)
+                      doc.text(`Orçamento #${orcamentoAberto.id}`, 14, 30)
+                      doc.text(`Data: ${new Date().toLocaleDateString('pt-BR')}`, 14, 37)
+                      doc.text(`Cliente: ${cliente?.nome || '-'}`, 14, 44)
+                      doc.text(`Equipamento: ${orcamentoAberto.equipamento || '-'}`, 14, 51)
+                      doc.text(`Serviço: ${orcamentoAberto.descricao || '-'}`, 14, 58)
+                      autoTable(doc, {
+                        startY: 68,
+                        head: [['Item', 'Qtd', 'Valor Unit.', 'Total']],
+                        body: [
+                          ...orcItens.map(i => [i.descricao || produtos.find(p => p.id === i.produto_id)?.nome || 'Item', i.quantidade, `R$ ${Number(i.valor_unitario).toFixed(2)}`, `R$ ${Number(i.valor_total).toFixed(2)}`]),
+                          ['Mão de obra', '1', `R$ ${Number(orcamentoAberto.valor_mao_obra || 0).toFixed(2)}`, `R$ ${Number(orcamentoAberto.valor_mao_obra || 0).toFixed(2)}`]
+                        ],
+                        styles: { fontSize: 10 },
+                        headStyles: { fillColor: [45, 106, 79] },
+                        footStyles: { fillColor: [240, 253, 244] },
+                        foot: [['', '', 'TOTAL', `R$ ${(orcItens.reduce((a, i) => a + Number(i.valor_total), 0) + Number(orcamentoAberto.valor_mao_obra || 0)).toFixed(2)}`]]
+                      })
+                      doc.save(`orcamento-${orcamentoAberto.id}.pdf`)
+                      mostrarToast('PDF exportado!')
+                    }} style={{ ...btn('#2563eb'), width: '100%', padding: 12, fontSize: 14 }}>
+                      📄 Exportar PDF do orçamento
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  {/* Lembretes de revisão */}
+                  {lembretes.length > 0 && (
+                    <div style={{ backgroundColor: c.amberLight, border: `1px solid ${dark ? '#5a3a0a' : '#fde68a'}`, borderRadius: 14, padding: 16, marginBottom: 16 }}>
+                      <p style={{ color: c.amber, fontWeight: 700, fontSize: 13, marginBottom: 8 }}>⏰ Lembretes de revisão</p>
+                      {lembretes.map(l => (
+                        <p key={l.id} style={{ color: c.amber, fontSize: 13, margin: '2px 0' }}>
+                          • {l.clientes?.nome || 'Cliente'} — Revisão prevista: {l.proxima_revisao} — {l.equipamento || ''}
+                        </p>
+                      ))}
+                    </div>
+                  )}
+
+                  <div style={{ ...card, marginBottom: 16 }}>
+                    <h2 style={{ fontSize: 15, fontWeight: 700, color: c.txt, marginBottom: 16, marginTop: 0 }}>Novo orçamento</h2>
+                    <form onSubmit={async (e) => {
+                      e.preventDefault()
+                      const { data: { user } } = await supabase.auth.getUser()
+                      const { data: orc } = await supabase.from('orcamentos').insert({
+                        descricao: novoOrc.descricao,
+                        equipamento: novoOrc.equipamento,
+                        cliente_id: novoOrc.cliente_id ? parseInt(novoOrc.cliente_id) : null,
+                        valor_mao_obra: parseFloat(novoOrc.valor_mao_obra) || 0,
+                        forma_pagamento: novoOrc.forma_pagamento,
+                        observacao: novoOrc.observacao,
+                        eh_revisao: novoOrc.eh_revisao,
+                        tipo: novoOrc.tipo,
+                        status: 'aguardando',
+                        user_id: empresaUserId || user?.id
+                      }).select().single()
+                      setNovoOrc({ descricao: '', equipamento: '', cliente_id: '', valor_mao_obra: '', forma_pagamento: 'dinheiro', observacao: '', eh_revisao: false, tipo: 'servico' })
+                      mostrarToast('Orçamento criado!')
+                      carregarDados()
+                      if (orc) { setOrcamentoAberto(orc); setOrcItens([]) }
+                    }} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+                      <div><label style={lbl}>Cliente</label>
+                        <select style={inp} value={novoOrc.cliente_id} onChange={e => setNovoOrc({...novoOrc, cliente_id: e.target.value})}>
+                          <option value="">Selecione o cliente</option>
+                          {clientes.filter(cl => cl.tipo === 'cliente').map(cl => <option key={cl.id} value={cl.id}>{cl.nome}</option>)}
+                        </select>
+                      </div>
+                      <div><label style={lbl}>Equipamento</label>
+                        <input placeholder="Ex: Jetski Sea-Doo 2022" style={inp} value={novoOrc.equipamento} onChange={e => setNovoOrc({...novoOrc, equipamento: e.target.value})} />
+                      </div>
+                      <div><label style={lbl}>Tipo de serviço</label>
+                        <select style={inp} value={novoOrc.tipo} onChange={e => setNovoOrc({...novoOrc, tipo: e.target.value})}>
+                          <option value="servico">Serviço</option>
+                          <option value="revisao">Revisão</option>
+                          <option value="manutencao">Manutenção</option>
+                          <option value="reparo">Reparo</option>
+                        </select>
+                      </div>
+                      <div style={{ gridColumn: '1/3' }}><label style={lbl}>Descrição do serviço</label>
+                        <input required placeholder="Ex: Revisão completa motor 100h" style={inp} value={novoOrc.descricao} onChange={e => setNovoOrc({...novoOrc, descricao: e.target.value})} />
+                      </div>
+                      <div><label style={lbl}>Forma de pagamento</label>
+                        <select style={inp} value={novoOrc.forma_pagamento} onChange={e => setNovoOrc({...novoOrc, forma_pagamento: e.target.value})}>
+                          {formasPagamento.map(f => <option key={f} value={f}>{f.charAt(0).toUpperCase() + f.slice(1)}</option>)}
+                        </select>
+                      </div>
+                      <div style={{ gridColumn: '1/-1', display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div onClick={() => setNovoOrc({...novoOrc, eh_revisao: !novoOrc.eh_revisao})}
+                          style={{ width: 40, height: 22, borderRadius: 99, backgroundColor: novoOrc.eh_revisao ? c.green : c.border, cursor: 'pointer', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}>
+                          <div style={{ position: 'absolute', top: 3, left: novoOrc.eh_revisao ? 20 : 3, width: 16, height: 16, borderRadius: '50%', backgroundColor: 'white', transition: 'left 0.2s' }} />
+                        </div>
+                        <span style={{ fontSize: 13, color: c.txt2 }}>Marcar como revisão (lembrete em 6 meses)</span>
+                      </div>
+                      <div style={{ gridColumn: '1/-1' }}><button type="submit" style={{ ...btn(c.green), width: '100%', padding: 12, fontSize: 14 }}>+ Criar orçamento</button></div>
+                    </form>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px,1fr))', gap: 16 }}>
+                    {orcamentos.map(o => {
+                      const cliente = clientes.find(cl => cl.id === o.cliente_id)
+                      return (
+                        <div key={o.id} onClick={async () => {
+                          const { data: itens } = await supabase.from('orcamento_itens').select('*').eq('orcamento_id', o.id)
+                          setOrcItens(itens || [])
+                          setOrcamentoAberto(o)
+                        }}
+                          style={{ ...card, cursor: 'pointer', transition: 'all 0.2s' }}
+                          onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-3px)'; (e.currentTarget as HTMLDivElement).style.boxShadow = '0 8px 24px rgba(0,0,0,0.15)' }}
+                          onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.transform = 'none'; (e.currentTarget as HTMLDivElement).style.boxShadow = 'none' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+                            <div>
+                              <p style={{ fontWeight: 700, color: c.txt, margin: 0 }}>#{o.id} — {cliente?.nome || 'Cliente'}</p>
+                              <p style={{ fontSize: 12, color: c.txt3, margin: 0 }}>{o.equipamento || o.descricao}</p>
+                            </div>
+                            <span style={{ backgroundColor: o.status === 'pago' ? c.greenLight : o.status === 'aprovado' ? '#dbeafe' : o.status === 'concluido' ? '#ede9fe' : c.amberLight, color: o.status === 'pago' ? c.greenText : o.status === 'aprovado' ? '#2563eb' : o.status === 'concluido' ? '#7c3aed' : c.amber, padding: '3px 10px', borderRadius: 99, fontSize: 11, fontWeight: 700 }}>
+                              {o.status === 'aguardando' ? 'Aguardando' : o.status === 'aprovado' ? 'Aprovado' : o.status === 'concluido' ? 'Concluído' : 'Pago'}
+                            </span>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 10, borderTop: `1px solid ${c.border}` }}>
+                            <span style={{ fontSize: 12, color: c.txt3 }}>{o.created_at?.split('T')[0]} • {o.tipo}</span>
+                            {o.eh_revisao && <span style={{ fontSize: 11, color: c.amber, fontWeight: 600 }}>⏰ Revisão</span>}
+                          </div>
+                        </div>
+                      )
+                    })}
+                    {orcamentos.length === 0 && (
+                      <div style={{ ...card, gridColumn: '1/-1', textAlign: 'center', padding: 40 }}>
+                        <p style={{ fontSize: 32, margin: '0 0 8px' }}>📋</p>
+                        <p style={{ color: c.txt3, fontSize: 14, margin: 0 }}>Nenhum orçamento ainda.</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* FORNECEDORES */}
+          {aba === 'fornecedores' && (
+            <div className="page-enter">
+              <div style={{ ...card, marginBottom: 16 }}>
+                <h2 style={{ fontSize: 15, fontWeight: 700, color: c.txt, marginBottom: 16, marginTop: 0 }}>Novo fornecedor</h2>
+                <form onSubmit={async (e) => {
+                  e.preventDefault()
+                  const { data: { user } } = await supabase.auth.getUser()
+                  await supabase.from('clientes').insert({ ...novoFornecedor, tipo: 'fornecedor', user_id: empresaUserId || user?.id })
+                  setNovoFornecedor({ nome: '', email: '', telefone: '', cpf_cnpj: '', observacao: '', endereco: '', cidade: '', estado: '' })
+                  mostrarToast('Fornecedor adicionado!')
+                  carregarDados()
+                }} style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12 }}>
+                  <div style={{ gridColumn: '1/3' }}><label style={lbl}>Nome do fornecedor</label><input required placeholder="Ex: Distribuidora XYZ" style={inp} value={novoFornecedor.nome} onChange={e => setNovoFornecedor({...novoFornecedor, nome: e.target.value})} /></div>
+                  <div><label style={lbl}>Telefone</label><input placeholder="(11) 99999-9999" style={inp} value={novoFornecedor.telefone} onChange={e => setNovoFornecedor({...novoFornecedor, telefone: e.target.value})} /></div>
+                  <div><label style={lbl}>E-mail</label><input type="email" placeholder="email@fornecedor.com" style={inp} value={novoFornecedor.email} onChange={e => setNovoFornecedor({...novoFornecedor, email: e.target.value})} /></div>
+                  <div><label style={lbl}>CNPJ/CPF</label><input placeholder="00.000.000/0001-00" style={inp} value={novoFornecedor.cpf_cnpj} onChange={e => setNovoFornecedor({...novoFornecedor, cpf_cnpj: e.target.value})} /></div>
+                  <div><label style={lbl}>Endereço</label><input placeholder="Rua, número" style={inp} value={novoFornecedor.endereco} onChange={e => setNovoFornecedor({...novoFornecedor, endereco: e.target.value})} /></div>
+                  <div><label style={lbl}>Cidade</label><input placeholder="São Paulo" style={inp} value={novoFornecedor.cidade} onChange={e => setNovoFornecedor({...novoFornecedor, cidade: e.target.value})} /></div>
+                  <div><label style={lbl}>Estado</label><input placeholder="SP" style={inp} value={novoFornecedor.estado} onChange={e => setNovoFornecedor({...novoFornecedor, estado: e.target.value})} /></div>
+                  <div style={{ gridColumn: '1/-1' }}><label style={lbl}>Observação</label><input placeholder="Ex: Fornecedor de peças náuticas" style={inp} value={novoFornecedor.observacao} onChange={e => setNovoFornecedor({...novoFornecedor, observacao: e.target.value})} /></div>
+                  <div style={{ gridColumn: '1/-1' }}><button type="submit" style={{ ...btn(c.green), width: '100%', padding: 12, fontSize: 14 }}>+ Adicionar fornecedor</button></div>
+                </form>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px,1fr))', gap: 16 }}>
+                {fornecedores.map(f => {
+                  const ultimaCompra = lancamentos.filter(l => l.cliente_id === f.id).sort((a, b) => b.data?.localeCompare(a.data))[0]
+                  return (
+                    <div key={f.id} style={{ ...card }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                          <div style={{ width: 42, height: 42, borderRadius: '50%', background: 'linear-gradient(135deg, #f97316, #ea580c)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 800, fontSize: 14 }}>
+                            {f.nome.substring(0, 2).toUpperCase()}
+                          </div>
+                          <div>
+                            <p style={{ fontWeight: 700, color: c.txt, margin: 0, fontSize: 14 }}>{f.nome}</p>
+                            {f.cpf_cnpj && <p style={{ fontSize: 11, color: c.txt3, margin: 0 }}>{f.cpf_cnpj}</p>}
+                          </div>
+                        </div>
+                        <button onClick={async (ev) => { ev.stopPropagation(); if (!confirm('Excluir?')) return; await supabase.from('clientes').delete().eq('id', f.id); mostrarToast('Excluído!'); carregarDados() }}
+                          style={{ backgroundColor: c.redLight, color: c.red, border: 'none', padding: '4px 8px', borderRadius: 7, fontSize: 11, cursor: 'pointer' }}>✕</button>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 10 }}>
+                        {f.telefone && <p style={{ fontSize: 12, color: c.txt3, margin: 0 }}>📞 {f.telefone}</p>}
+                        {f.email && <p style={{ fontSize: 12, color: c.txt3, margin: 0 }}>✉ {f.email}</p>}
+                        {f.endereco && <p style={{ fontSize: 12, color: c.txt3, margin: 0 }}>📍 {f.endereco}{f.cidade ? `, ${f.cidade}` : ''}{f.estado ? ` — ${f.estado}` : ''}</p>}
+                      </div>
+                      {ultimaCompra && (
+                        <div style={{ backgroundColor: c.subCard, borderRadius: 8, padding: 10, borderTop: `1px solid ${c.border}` }}>
+                          <p style={{ fontSize: 11, color: c.txt3, fontWeight: 700, textTransform: 'uppercase', margin: '0 0 4px' }}>Última compra</p>
+                          <p style={{ fontSize: 13, color: c.txt2, margin: 0 }}>{ultimaCompra.descricao}</p>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
+                            <span style={{ fontSize: 12, color: c.txt3 }}>{ultimaCompra.data}</span>
+                            <span style={{ fontSize: 13, fontWeight: 700, color: c.red }}>{fmt(ultimaCompra.valor)}</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+                {fornecedores.length === 0 && (
+                  <div style={{ ...card, gridColumn: '1/-1', textAlign: 'center', padding: 40 }}>
+                    <p style={{ fontSize: 32, margin: '0 0 8px' }}>🏭</p>
+                    <p style={{ color: c.txt3, fontSize: 14, margin: 0 }}>Nenhum fornecedor ainda.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* EQUIPE */}
           {aba === 'equipe' && (
             <div className="page-enter">
               <div style={{ ...card, marginBottom: 16 }}>
