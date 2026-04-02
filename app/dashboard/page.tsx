@@ -34,7 +34,9 @@ export default function Dashboard() {
   const [lancamentoAberto, setLancamentoAberto] = useState<any>(null)
   const [clienteSelecionado, setClienteSelecionado] = useState<any>(null)
   const [editandoCliente, setEditandoCliente] = useState<any>(null)
-  const [novoCliente, setNovoCliente] = useState({ nome: '', email: '', telefone: '', cpf_cnpj: '', tipo: 'cliente', observacao: '' })
+  const [novoCliente, setNovoCliente] = useState({ nome: '', email: '', telefone: '', cpf_cnpj: '', tipo: 'cliente', observacao: '', endereco: '' })
+  const [novoEquipamento, setNovoEquipamento] = useState('')
+  const [equipamentosTemp, setEquipamentosTemp] = useState<string[]>([])
   const [editandoMembro, setEditandoMembro] = useState<any>(null)
   const [orcamentos, setOrcamentos] = useState<any[]>([])
   const [orcamentoAberto, setOrcamentoAberto] = useState<any>(null)
@@ -52,7 +54,7 @@ export default function Dashboard() {
     adicionar: true, editar: false, excluir: false
   })
   const [novoLanc, setNovoLanc] = useState({ descricao: '', valor: '', tipo: 'entrada', categoria: 'Vendas', produto_id: '', quantidade_vendida: '', forma_pagamento: 'dinheiro', cliente_id: '', observacao: '' })
-  const [novoProd, setNovoProd] = useState({ nome: '', quantidade: '', quantidade_minima: '', preco_custo: '', preco_venda: '' })
+  const [novoProd, setNovoProd] = useState({ nome: '', quantidade: '', quantidade_minima: '', preco_custo: '', preco_venda: '', fornecedor_id: '' })
   const [novaConta, setNovaConta] = useState({ descricao: '', valor: '', tipo: 'pagar', categoria: 'Fornecedores', vencimento: '' })
   const [novaMeta, setNovaMeta] = useState({ descricao: '', valor_meta: '', mes: '', tipo: 'entrada' })
   const [editandoLanc, setEditandoLanc] = useState<any>(null)
@@ -206,13 +208,13 @@ export default function Dashboard() {
   async function adicionarProduto(e: React.FormEvent) {
     e.preventDefault()
     const { data: { user } } = await supabase.auth.getUser()
-    await supabase.from('produtos').insert({ ...novoProd, quantidade: parseFloat(novoProd.quantidade), quantidade_minima: parseFloat(novoProd.quantidade_minima), preco_custo: parseFloat(novoProd.preco_custo), preco_venda: parseFloat(novoProd.preco_venda), user_id: empresaUserId || user?.id })
-    setNovoProd({ nome: '', quantidade: '', quantidade_minima: '', preco_custo: '', preco_venda: '' }); mostrarToast('Produto adicionado!'); carregarDados()
+    await supabase.from('produtos').insert({ ...novoProd, quantidade: parseFloat(novoProd.quantidade), quantidade_minima: parseFloat(novoProd.quantidade_minima), preco_custo: parseFloat(novoProd.preco_custo), preco_venda: parseFloat(novoProd.preco_venda), fornecedor_id: novoProd.fornecedor_id ? parseInt(novoProd.fornecedor_id) : null, user_id: empresaUserId || user?.id })
+    setNovoProd({ nome: '', quantidade: '', quantidade_minima: '', preco_custo: '', preco_venda: '', fornecedor_id: '' }); mostrarToast('Produto adicionado!'); carregarDados()
   }
 
   async function salvarEdicaoProd(e: React.FormEvent) {
     e.preventDefault()
-    await supabase.from('produtos').update({ nome: editandoProd.nome, quantidade: parseFloat(editandoProd.quantidade), quantidade_minima: parseFloat(editandoProd.quantidade_minima), preco_custo: parseFloat(editandoProd.preco_custo), preco_venda: parseFloat(editandoProd.preco_venda) }).eq('id', editandoProd.id)
+    await supabase.from('produtos').update({ nome: editandoProd.nome, quantidade: parseFloat(editandoProd.quantidade), quantidade_minima: parseFloat(editandoProd.quantidade_minima), preco_custo: parseFloat(editandoProd.preco_custo), preco_venda: parseFloat(editandoProd.preco_venda), fornecedor_id: editandoProd.fornecedor_id ? parseInt(editandoProd.fornecedor_id) : null }).eq('id', editandoProd.id)
     setEditandoProd(null); mostrarToast('Produto atualizado!'); carregarDados()
   }
 
@@ -701,6 +703,12 @@ export default function Dashboard() {
                       <div><label style={lbl}>Preço custo</label><input type="number" step="0.01" style={inp} value={editandoProd.preco_custo} onChange={e => setEditandoProd({...editandoProd, preco_custo: e.target.value})} /></div>
                       <div><label style={lbl}>Preço venda</label><input type="number" step="0.01" style={inp} value={editandoProd.preco_venda} onChange={e => setEditandoProd({...editandoProd, preco_venda: e.target.value})} /></div>
                     </div>
+                    <div style={{ marginTop: 12 }}><label style={lbl}>Fornecedor</label>
+                      <select style={inp} value={editandoProd.fornecedor_id || ''} onChange={e => setEditandoProd({...editandoProd, fornecedor_id: e.target.value})}>
+                        <option value="">Nenhum</option>
+                        {fornecedores.map(f => <option key={f.id} value={f.id}>{f.nome}</option>)}
+                      </select>
+                    </div>
                     <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
                       <button type="button" onClick={() => setEditandoProd(null)} style={{ ...btn(c.subCard, c.txt2), flex: 1, border: `1px solid ${c.border}` }}>Cancelar</button>
                       <button type="submit" style={{ ...btn(c.green), flex: 1 }}>Salvar</button>
@@ -716,6 +724,12 @@ export default function Dashboard() {
                   <div><label style={lbl}>Qtd mínima</label><input required type="number" style={inp} value={novoProd.quantidade_minima} onChange={e => setNovoProd({...novoProd, quantidade_minima: e.target.value})} /></div>
                   <div><label style={lbl}>Preço custo (R$)</label><input required type="number" step="0.01" style={inp} value={novoProd.preco_custo} onChange={e => setNovoProd({...novoProd, preco_custo: e.target.value})} /></div>
                   <div><label style={lbl}>Preço venda (R$)</label><input required type="number" step="0.01" style={inp} value={novoProd.preco_venda} onChange={e => setNovoProd({...novoProd, preco_venda: e.target.value})} /></div>
+                  <div><label style={lbl}>Fornecedor</label>
+                    <select style={inp} value={novoProd.fornecedor_id} onChange={e => setNovoProd({...novoProd, fornecedor_id: e.target.value})}>
+                      <option value="">Nenhum</option>
+                      {fornecedores.map(f => <option key={f.id} value={f.id}>{f.nome}</option>)}
+                    </select>
+                  </div>
                   {permissoes.adicionar && <div style={{ gridColumn: '1/-1' }}><button type="submit" style={{ ...btn(c.green), width: '100%', padding: '12px', fontSize: 14 }}>+ Adicionar produto</button></div>}
                 </form>
               </div>
@@ -927,6 +941,7 @@ export default function Dashboard() {
                         { label: 'E-mail', valor: clienteSelecionado.email },
                         { label: 'Telefone', valor: clienteSelecionado.telefone },
                         { label: 'CPF/CNPJ', valor: clienteSelecionado.cpf_cnpj },
+                        { label: 'Endereço', valor: clienteSelecionado.endereco },
                         { label: 'Observação', valor: clienteSelecionado.observacao },
                       ].filter(f => f.valor).map(f => (
                         <div key={f.label} style={{ backgroundColor: c.subCard, borderRadius: 10, padding: 12 }}>
@@ -935,6 +950,62 @@ export default function Dashboard() {
                         </div>
                       ))}
                     </div>
+                    {clienteSelecionado.equipamentos && clienteSelecionado.equipamentos.length > 0 && (
+                      <div style={{ marginTop: 16 }}>
+                        <p style={{ fontSize: 11, color: c.txt3, fontWeight: 700, textTransform: 'uppercase', margin: '0 0 8px' }}>Equipamentos náuticos</p>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                          {clienteSelecionado.equipamentos.map((eq: string, i: number) => (
+                            <div key={i} style={{ backgroundColor: c.greenLight, color: c.greenText, padding: '6px 14px', borderRadius: 99, fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
+                              ⛵ {eq}
+                              {isOwner && <span onClick={async () => {
+                                const novos = clienteSelecionado.equipamentos.filter((_: string, idx: number) => idx !== i)
+                                await supabase.from('clientes').update({ equipamentos: novos }).eq('id', clienteSelecionado.id)
+                                setClienteSelecionado({...clienteSelecionado, equipamentos: novos})
+                                mostrarToast('Equipamento removido!')
+                              }} style={{ cursor: 'pointer', color: c.red, fontSize: 16 }}>✕</span>}
+                            </div>
+                          ))}
+                        </div>
+                        {isOwner && (
+                          <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+                            <input placeholder="Adicionar equipamento..." style={{...inp, flex: 1}} value={novoEquipamento} onChange={e => setNovoEquipamento(e.target.value)}
+                              onKeyDown={async e => {
+                                if (e.key === 'Enter' && novoEquipamento.trim()) {
+                                  const novos = [...(clienteSelecionado.equipamentos || []), novoEquipamento.trim()]
+                                  await supabase.from('clientes').update({ equipamentos: novos }).eq('id', clienteSelecionado.id)
+                                  setClienteSelecionado({...clienteSelecionado, equipamentos: novos})
+                                  setNovoEquipamento('')
+                                  mostrarToast('Equipamento adicionado!')
+                                }
+                              }} />
+                            <button onClick={async () => {
+                              if (!novoEquipamento.trim()) return
+                              const novos = [...(clienteSelecionado.equipamentos || []), novoEquipamento.trim()]
+                              await supabase.from('clientes').update({ equipamentos: novos }).eq('id', clienteSelecionado.id)
+                              setClienteSelecionado({...clienteSelecionado, equipamentos: novos})
+                              setNovoEquipamento('')
+                              mostrarToast('Equipamento adicionado!')
+                            }} style={{ ...btn(c.green), padding: '8px 16px' }}>+ Add</button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {(!clienteSelecionado.equipamentos || clienteSelecionado.equipamentos.length === 0) && isOwner && (
+                      <div style={{ marginTop: 16 }}>
+                        <p style={{ fontSize: 11, color: c.txt3, fontWeight: 700, textTransform: 'uppercase', margin: '0 0 8px' }}>Equipamentos náuticos</p>
+                        <div style={{ display: 'flex', gap: 8 }}>
+                          <input placeholder="Adicionar equipamento..." style={{...inp, flex: 1}} value={novoEquipamento} onChange={e => setNovoEquipamento(e.target.value)} />
+                          <button onClick={async () => {
+                            if (!novoEquipamento.trim()) return
+                            const novos = [novoEquipamento.trim()]
+                            await supabase.from('clientes').update({ equipamentos: novos }).eq('id', clienteSelecionado.id)
+                            setClienteSelecionado({...clienteSelecionado, equipamentos: novos})
+                            setNovoEquipamento('')
+                            mostrarToast('Equipamento adicionado!')
+                          }} style={{ ...btn(c.green), padding: '8px 16px' }}>+ Add</button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                   <div style={{ ...card, padding: 0, overflow: 'hidden' }}>
                     <div style={{ padding: '16px 20px', borderBottom: `1px solid ${c.border}` }}>
@@ -997,8 +1068,9 @@ export default function Dashboard() {
                     <form onSubmit={async (e) => {
                       e.preventDefault()
                       const { data: { user } } = await supabase.auth.getUser()
-                      await supabase.from('clientes').insert({ ...novoCliente, user_id: empresaUserId || user?.id })
-                      setNovoCliente({ nome: '', email: '', telefone: '', cpf_cnpj: '', tipo: 'cliente', observacao: '' })
+                      await supabase.from('clientes').insert({ ...novoCliente, equipamentos: equipamentosTemp.length > 0 ? equipamentosTemp : null, user_id: empresaUserId || user?.id })
+                      setNovoCliente({ nome: '', email: '', telefone: '', cpf_cnpj: '', tipo: 'cliente', observacao: '', endereco: '' })
+                      setEquipamentosTemp([])
                       mostrarToast('Cadastro adicionado!'); carregarDados()
                     }} style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12 }}>
                       <div style={{ gridColumn: '1/3' }}><label style={lbl}>Nome completo</label><input required placeholder="Ex: João da Silva" style={inp} value={novoCliente.nome} onChange={e => setNovoCliente({...novoCliente, nome: e.target.value})} /></div>
@@ -1006,7 +1078,25 @@ export default function Dashboard() {
                       <div><label style={lbl}>E-mail</label><input type="email" placeholder="email@exemplo.com" style={inp} value={novoCliente.email} onChange={e => setNovoCliente({...novoCliente, email: e.target.value})} /></div>
                       <div><label style={lbl}>Telefone</label><input placeholder="(11) 99999-9999" style={inp} value={novoCliente.telefone} onChange={e => setNovoCliente({...novoCliente, telefone: e.target.value})} /></div>
                       <div><label style={lbl}>CPF/CNPJ</label><input placeholder="000.000.000-00" style={inp} value={novoCliente.cpf_cnpj} onChange={e => setNovoCliente({...novoCliente, cpf_cnpj: e.target.value})} /></div>
-                      <div style={{ gridColumn: '1/-1' }}><label style={lbl}>Endereço</label><input placeholder="Rua, número, bairro, cidade" style={inp} value={(novoCliente as any).endereco || ''} onChange={e => setNovoCliente({...novoCliente, endereco: e.target.value} as any)} /></div>
+                      <div style={{ gridColumn: '1/-1' }}><label style={lbl}>Endereço</label><input placeholder="Rua, número, bairro, cidade" style={inp} value={novoCliente.endereco || ''} onChange={e => setNovoCliente({...novoCliente, endereco: e.target.value})} /></div>
+                      <div style={{ gridColumn: '1/-1' }}>
+                        <label style={lbl}>Equipamentos náuticos</label>
+                        <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+                          <input placeholder="Ex: Jetski Sea-Doo RXT 300 2022" style={{...inp, flex: 1}} value={novoEquipamento} onChange={e => setNovoEquipamento(e.target.value)}
+                            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); if (novoEquipamento.trim()) { setEquipamentosTemp([...equipamentosTemp, novoEquipamento.trim()]); setNovoEquipamento('') }}}} />
+                          <button type="button" onClick={() => { if (novoEquipamento.trim()) { setEquipamentosTemp([...equipamentosTemp, novoEquipamento.trim()]); setNovoEquipamento('') }}} style={{ ...btn(c.green), padding: '8px 16px', whiteSpace: 'nowrap' }}>+ Add</button>
+                        </div>
+                        {equipamentosTemp.length > 0 && (
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                            {equipamentosTemp.map((eq, i) => (
+                              <div key={i} style={{ backgroundColor: c.greenLight, color: c.greenText, padding: '4px 10px', borderRadius: 99, fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+                                {eq}
+                                <span onClick={() => setEquipamentosTemp(equipamentosTemp.filter((_, idx) => idx !== i))} style={{ cursor: 'pointer', fontSize: 14, color: c.red }}>✕</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                       <div style={{ gridColumn: '1/-1' }}><button type="submit" style={{ ...btn(c.green), width: '100%', padding: '12px', fontSize: 14 }}>+ Adicionar cadastro</button></div>
                     </form>
                   </div>
@@ -1032,6 +1122,17 @@ export default function Dashboard() {
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                           {cl.email && <p style={{ fontSize: 12, color: c.txt3, margin: 0 }}>✉ {cl.email}</p>}
                           {cl.telefone && <p style={{ fontSize: 12, color: c.txt3, margin: 0 }}>📞 {cl.telefone}</p>}
+                          {cl.endereco && <p style={{ fontSize: 12, color: c.txt3, margin: 0 }}>📍 {cl.endereco}</p>}
+                          {cl.equipamentos && cl.equipamentos.length > 0 && (
+                            <div style={{ marginTop: 8 }}>
+                              <p style={{ fontSize: 10, color: c.txt3, fontWeight: 700, textTransform: 'uppercase', margin: '0 0 4px' }}>Equipamentos</p>
+                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                                {cl.equipamentos.map((eq: string, i: number) => (
+                                  <span key={i} style={{ backgroundColor: c.greenLight, color: c.greenText, padding: '2px 8px', borderRadius: 99, fontSize: 11, fontWeight: 600 }}>⛵ {eq}</span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
                           <div style={{ marginTop: 8, paddingTop: 8, borderTop: `1px solid ${c.border}` }}>
                             <p style={{ fontSize: 12, color: c.greenText, margin: 0, fontWeight: 600 }}>
                               {lancamentos.filter(l => l.cliente_id === cl.id).length} lançamento(s) • {fmt(lancamentos.filter(l => l.cliente_id === cl.id).reduce((a, l) => a + Number(l.valor), 0))}
